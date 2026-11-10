@@ -1,11 +1,11 @@
 import { inject, injectable } from "tsyringe";
 
 import { PaginatedDto } from "../../../../shared/dtos/paginated-dto";
-import { HarvestProps } from "../../domain/entities/harvest";
 import {
   HARVEST_REPOSITORY,
   HarvestRepository,
 } from "../../domain/repositories/harvest-repository";
+import { HarvestDetailsDto, toHarvestDetailsDto } from "../dtos/harvest-details-dto";
 import { ListHarvestsDto } from "../dtos/list-harvests-dto";
 
 const DEFAULT_PAGE = 1;
@@ -18,7 +18,7 @@ export class ListHarvestsUseCase {
     private readonly harvestRepository: HarvestRepository,
   ) {}
 
-  async execute(input: ListHarvestsDto): Promise<PaginatedDto<HarvestProps>> {
+  async execute(input: ListHarvestsDto): Promise<PaginatedDto<HarvestDetailsDto>> {
     const page = input.page ?? DEFAULT_PAGE;
     const limit = input.limit ?? DEFAULT_LIMIT;
 
@@ -27,11 +27,13 @@ export class ListHarvestsUseCase {
       page,
       limit,
       search,
+      createdFrom: input.createdFrom,
+      createdTo: input.createdTo,
       includeDeleted: input.includeDeleted ?? false,
     });
 
     return {
-      data: result.harvests.map((harvest) => harvest.toObject()),
+      data: result.harvests.map(toHarvestDetailsDto),
       meta: {
         page,
         limit,

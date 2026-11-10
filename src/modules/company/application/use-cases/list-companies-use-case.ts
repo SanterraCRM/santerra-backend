@@ -1,11 +1,11 @@
 import { inject, injectable } from "tsyringe";
 
 import { PaginatedDto } from "../../../../shared/dtos/paginated-dto";
-import { CompanyProps } from "../../domain/entities/company";
 import {
   COMPANY_REPOSITORY,
   CompanyRepository,
 } from "../../domain/repositories/company-repository";
+import { CompanyDetailsDto, toCompanyDetailsDto } from "../dtos/company-details-dto";
 import { ListCompaniesDto } from "../dtos/list-companies-dto";
 
 const DEFAULT_PAGE = 1;
@@ -18,7 +18,7 @@ export class ListCompaniesUseCase {
     private readonly companyRepository: CompanyRepository,
   ) {}
 
-  async execute(input: ListCompaniesDto): Promise<PaginatedDto<CompanyProps>> {
+  async execute(input: ListCompaniesDto): Promise<PaginatedDto<CompanyDetailsDto>> {
     const page = input.page ?? DEFAULT_PAGE;
     const limit = input.limit ?? DEFAULT_LIMIT;
 
@@ -31,7 +31,7 @@ export class ListCompaniesUseCase {
     });
 
     return {
-      data: result.companies.map((company) => company.toObject()),
+      data: result.companies.map(toCompanyDetailsDto),
       meta: {
         page,
         limit,

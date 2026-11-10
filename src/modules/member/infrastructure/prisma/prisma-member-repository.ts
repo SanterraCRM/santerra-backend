@@ -6,8 +6,16 @@ import {
   MemberRepository,
   FindMembersParams,
   FindMembersResult,
+  MemberDetails,
+  MemberWalletUsage,
 } from "../../domain/repositories/member-repository";
-import { PrismaMemberMapper, memberInclude } from "./prisma-member-mapper";
+
+const ACTIVE_WALLET = { deletedAt: null };
+import {
+  PrismaMemberMapper,
+  memberDetailsInclude,
+  memberInclude,
+} from "./prisma-member-mapper";
 
 @injectable()
 export class PrismaMemberRepository implements MemberRepository {
@@ -28,6 +36,19 @@ export class PrismaMemberRepository implements MemberRepository {
     });
 
     return member ? PrismaMemberMapper.toDomain(member) : null;
+  }
+
+  async findDetailsById(id: string, companyId: string): Promise<MemberDetails | null> {
+    const member = await this.prisma.userCompany.findFirst({
+      where: {
+        id,
+        companyId,
+        deletedAt: null,
+      },
+      include: memberDetailsInclude,
+    });
+
+    return member ? PrismaMemberMapper.toDetails(member) : null;
   }
 
   async findByUserId(
@@ -51,6 +72,16 @@ export class PrismaMemberRepository implements MemberRepository {
     const where: Prisma.UserCompanyWhereInput = {
       companyId: params.companyId,
       deletedAt: params.includeDeleted ? undefined : null,
+      active: params.active,
+      userRoles: params.roleId
+        ? { some: { roleId: params.roleId, role: { deletedAt: null } } }
+        : undefined,
+      wallets:
+        params.hasWallet === undefined
+          ? undefined
+          : params.hasWallet
+            ? { some: ACTIVE_WALLET }
+            : { none: ACTIVE_WALLET },
       user: params.search
         ? {
             OR: [
@@ -64,7 +95,7 @@ export class PrismaMemberRepository implements MemberRepository {
     const [members, total] = await this.prisma.$transaction([
       this.prisma.userCompany.findMany({
         where,
-        include: memberInclude,
+        include: memberDetailsInclude,
         orderBy: { createdAt: "desc" },
         skip: (params.page - 1) * params.limit,
         take: params.limit,
@@ -73,12 +104,12 @@ export class PrismaMemberRepository implements MemberRepository {
     ]);
 
     return {
-      members: members.map(PrismaMemberMapper.toDomain),
+      members: members.map(PrismaMemberMapper.toDetails),
       total,
     };
   }
 
-  async update(member: Member): Promise<Member> {
+  async update(member: Member): Promise<MemberDetails> {
     const data = member.toObject();
     const [, , updatedMember] = await this.prisma.$transaction([
       this.prisma.userRole.deleteMany({ where: { userCompanyId: data.id } }),
@@ -100,26 +131,50 @@ export class PrismaMemberRepository implements MemberRepository {
           updatedAt: data.updatedAt,
           updatedById: data.updatedById,
         },
-        include: memberInclude,
+        include: memberDetailsInclude,
       }),
     ]);
 
-    return PrismaMemberMapper.toDomain(updatedMember);
+    return PrismaMemberMapper.toDetails(updatedMember);
+  }
+
+  async findWalletUsage(id: string, companyId: string): Promise<MemberWalletUsage | null> {
+    const wallet = await this.prisma.wallet.findFirst({
+      where: { userCompanyId: id, companyId, ...ACTIVE_WALLET },
+      select: {
+        value: true,
+        _count: { select: { commercialActions: { where: { deletedAt: null } } } },
+      },
+    });
+
+    return wallet
+      ? { balance: wallet.value.toNumber(), actionsCount: wallet._count.commercialActions }
+      : null;
   }
 
   async delete(member: Member): Promise<void> {
     const data = member.toObject();
 
-    await this.prisma.userCompany.update({
-      where: {
-        id: data.id,
-        companyId: data.companyId,
-        deletedAt: null,
-      },
-      data: {
-        deletedAt: data.deletedAt,
-        deletedById: data.deletedById,
-      },
-    });
+    await this.prisma.$transaction([
+      this.prisma.employee.updateMany({
+        where: { userCompanyId: data.id, companyId: data.companyId },
+        data: { userCompanyId: null },
+      }),
+      this.prisma.wallet.updateMany({
+        where: { userCompanyId: data.id, companyId: data.companyId, ...ACTIVE_WALLET },
+        data: { deletedAt: data.deletedAt, deletedById: data.deletedById },
+      }),
+      this.prisma.userCompany.update({
+        where: {
+          id: data.id,
+          companyId: data.companyId,
+          deletedAt: null,
+        },
+        data: {
+          deletedAt: data.deletedAt,
+          deletedById: data.deletedById,
+        },
+      }),
+    ]);
   }
 }

@@ -2,12 +2,12 @@ import { RequestHandler } from "express";
 import { injectable } from "tsyringe";
 
 import { getTenantContext } from "../../../../shared/http/request-context";
-import { idParamSchema, listQuerySchema } from "../../../../shared/http/request-schemas";
+import { idParamSchema } from "../../../../shared/http/request-schemas";
 import { DeleteMemberUseCase } from "../../application/use-cases/delete-member-use-case";
 import { GetMemberUseCase } from "../../application/use-cases/get-member-use-case";
 import { ListMembersUseCase } from "../../application/use-cases/list-members-use-case";
 import { UpdateMemberUseCase } from "../../application/use-cases/update-member-use-case";
-import { updateMemberSchema } from "./member-schemas";
+import { listMembersQuerySchema, updateMemberSchema } from "./member-schemas";
 
 @injectable()
 export class MemberController {
@@ -20,7 +20,7 @@ export class MemberController {
 
   list: RequestHandler = async (request, response) => {
     const result = await this.listMembersUseCase.execute(
-      listQuerySchema.parse(request.query),
+      listMembersQuerySchema.parse(request.query),
       getTenantContext(request),
     );
 

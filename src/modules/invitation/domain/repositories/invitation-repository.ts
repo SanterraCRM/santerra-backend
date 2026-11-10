@@ -4,11 +4,15 @@ import { Invitation } from "../entities/invitation";
 
 export const INVITATION_REPOSITORY = "InvitationRepository";
 
+export const INVITATION_STATUSES = ["pending", "accepted", "expired"] as const;
+export type InvitationStatus = (typeof INVITATION_STATUSES)[number];
+
 export interface FindInvitationsParams {
   companyId: string;
   page: number;
   limit: number;
   search?: string;
+  status?: InvitationStatus;
   includeDeleted: boolean;
 }
 

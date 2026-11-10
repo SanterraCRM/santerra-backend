@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { dateTimeQuerySchema, listQuerySchema } from "../../../../shared/http/request-schemas";
 import { CommercialTripStatus } from "../../enumCommercialTrip/EnumCommercialTrip";
 
 export const createCommercialTripSchema = z.object({
@@ -22,3 +23,13 @@ export const updateCommercialTripSchema = createCommercialTripSchema
   .refine((data) => Object.keys(data).length > 0, {
     message: "Informe ao menos um campo para atualizar.",
   });
+
+export const listCommercialTripsQuerySchema = listQuerySchema.extend({
+  status: z.enum(CommercialTripStatus).optional(),
+  producerId: z.uuid().optional(),
+  responsibleId: z.uuid().optional(),
+  expectedFrom: dateTimeQuerySchema.optional(),
+  expectedTo: dateTimeQuerySchema.optional(),
+  tripFrom: dateTimeQuerySchema.optional(),
+  tripTo: dateTimeQuerySchema.optional(),
+});

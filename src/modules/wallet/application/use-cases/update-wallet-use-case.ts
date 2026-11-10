@@ -1,14 +1,15 @@
 import { inject, injectable } from "tsyringe";
 
 import { TenantContext } from "../../../../shared/application/auth/auth-context";
-import { ResourceNotFoundError } from "../../../../shared/errors/app-error";
+import { ConflictError, ResourceNotFoundError } from "../../../../shared/errors/app-error";
 import { MEMBER_REPOSITORY, MemberRepository } from "../../../member";
-import { WalletProps } from "../../domain/entities/wallet";
 import {
   WALLET_REPOSITORY,
   WalletRepository,
 } from "../../domain/repositories/wallet-repository";
 import { UpdateWalletDto } from "../dtos/update-wallet-dto";
+import { toWalletDetailsDto, WalletDetailsDto } from "../dtos/wallet-details-dto";
+import { MEMBER_HAS_WALLET_MESSAGE } from "./create-wallet-use-case";
 
 @injectable()
 export class UpdateWalletUseCase {
@@ -23,24 +24,28 @@ export class UpdateWalletUseCase {
     id: string,
     input: UpdateWalletDto,
     context: TenantContext,
-  ): Promise<WalletProps> {
+  ): Promise<WalletDetailsDto> {
     const wallet = await this.walletRepository.findById(id, context.companyId);
 
     if (!wallet) {
       throw new ResourceNotFoundError("Carteira não encontrada.");
     }
 
+    const previousUserCompanyId = wallet.userCompanyId;
     wallet.update({ ...input, updatedById: context.userId });
 
-    if (
-      input.userCompanyId !== undefined &&
-      !(await this.memberRepository.findById(wallet.userCompanyId, context.companyId))
-    ) {
-      throw new ResourceNotFoundError("Membro não encontrado.");
+    if (wallet.userCompanyId !== previousUserCompanyId) {
+      if (!(await this.memberRepository.findById(wallet.userCompanyId, context.companyId))) {
+        throw new ResourceNotFoundError("Membro não encontrado.");
+      }
+
+      if (await this.walletRepository.findByUserCompanyId(wallet.userCompanyId, context.companyId)) {
+        throw new ConflictError(MEMBER_HAS_WALLET_MESSAGE);
+      }
     }
 
     const updatedWallet = await this.walletRepository.update(wallet);
 
-    return updatedWallet.toObject();
+    return toWalletDetailsDto(updatedWallet);
   }
 }

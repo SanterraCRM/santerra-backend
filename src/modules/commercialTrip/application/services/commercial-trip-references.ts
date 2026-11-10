@@ -1,6 +1,6 @@
 import { inject, injectable } from "tsyringe";
 
-import { ResourceNotFoundError } from "../../../../shared/errors/app-error";
+import { ResourceNotFoundError, ValidationError } from "../../../../shared/errors/app-error";
 import { EMPLOYEE_REPOSITORY, EmployeeRepository } from "../../../employee";
 import { FILE_REPOSITORY, FileRepository } from "../../../file";
 import { HARVEST_REPOSITORY, HarvestRepository } from "../../../harvest";
@@ -36,11 +36,19 @@ export class CommercialTripReferences {
       throw new ResourceNotFoundError("Produtor não encontrado.");
     }
 
-    if (
-      changes.responsibleId !== undefined &&
-      !(await this.employeeRepository.findById(commercialTrip.responsibleId, companyId))
-    ) {
-      throw new ResourceNotFoundError("Funcionário responsável não encontrado.");
+    if (changes.responsibleId !== undefined) {
+      const responsible = await this.employeeRepository.findById(
+        commercialTrip.responsibleId,
+        companyId,
+      );
+
+      if (!responsible) {
+        throw new ResourceNotFoundError("Funcionário responsável não encontrado.");
+      }
+
+      if (!responsible.isActive()) {
+        throw new ValidationError("O responsável precisa ser um funcionário ativo.");
+      }
     }
 
     if (changes.participantIds !== undefined) {
@@ -55,7 +63,7 @@ export class CommercialTripReferences {
       await this.ensureAll(
         commercialTrip.harvestIds,
         (ids) => this.harvestRepository.findManyByIds(ids),
-        "Colheita não encontrada.",
+        "Cultura não encontrada.",
       );
     }
 

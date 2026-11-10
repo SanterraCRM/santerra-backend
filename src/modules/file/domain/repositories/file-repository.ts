@@ -26,4 +26,5 @@ export interface FileRepository {
   findMany(params: FindFilesParams): Promise<FindFilesResult>;
   update(file: File): Promise<File>;
   delete(file: File): Promise<void>;
+  deleteUnlinked(ids: string[], companyId: string, deletedById: string | null): Promise<void>;
 }

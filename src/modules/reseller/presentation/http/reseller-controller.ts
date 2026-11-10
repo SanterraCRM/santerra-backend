@@ -2,13 +2,17 @@ import { RequestHandler } from "express";
 import { injectable } from "tsyringe";
 
 import { getTenantContext } from "../../../../shared/http/request-context";
-import { idParamSchema, listQuerySchema } from "../../../../shared/http/request-schemas";
+import { idParamSchema } from "../../../../shared/http/request-schemas";
 import { CreateResellerUseCase } from "../../application/use-cases/create-reseller-use-case";
 import { DeleteResellerUseCase } from "../../application/use-cases/delete-reseller-use-case";
 import { GetResellerUseCase } from "../../application/use-cases/get-reseller-use-case";
 import { ListResellersUseCase } from "../../application/use-cases/list-resellers-use-case";
 import { UpdateResellerUseCase } from "../../application/use-cases/update-reseller-use-case";
-import { createResellerSchema, updateResellerSchema } from "./reseller-schemas";
+import {
+  createResellerSchema,
+  listResellersQuerySchema,
+  updateResellerSchema,
+} from "./reseller-schemas";
 
 @injectable()
 export class ResellerController {
@@ -31,7 +35,7 @@ export class ResellerController {
 
   list: RequestHandler = async (request, response) => {
     const result = await this.listResellersUseCase.execute(
-      listQuerySchema.parse(request.query),
+      listResellersQuerySchema.parse(request.query),
       getTenantContext(request),
     );
 

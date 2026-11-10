@@ -2,6 +2,7 @@ import { RequestHandler } from "express";
 import { injectable } from "tsyringe";
 
 import { getAuthContext } from "../../../../shared/http/request-context";
+import { CreateCompanyUseCase } from "../../application/use-cases/create-company-use-case";
 import { ForgotPasswordUseCase } from "../../application/use-cases/forgot-password-use-case";
 import { GetSessionUseCase } from "../../application/use-cases/get-session-use-case";
 import { LoginUseCase } from "../../application/use-cases/login-use-case";
@@ -11,6 +12,7 @@ import { SendEmailVerificationUseCase } from "../../application/use-cases/send-e
 import { SignUpUseCase } from "../../application/use-cases/sign-up-use-case";
 import { VerifyEmailUseCase } from "../../application/use-cases/verify-email-use-case";
 import {
+  createCompanySchema,
   forgotPasswordSchema,
   loginSchema,
   resetPasswordSchema,
@@ -31,6 +33,7 @@ export class AuthController {
     private readonly getSessionUseCase: GetSessionUseCase,
     private readonly forgotPasswordUseCase: ForgotPasswordUseCase,
     private readonly resetPasswordUseCase: ResetPasswordUseCase,
+    private readonly createCompanyUseCase: CreateCompanyUseCase,
   ) {}
 
   sendEmailVerification: RequestHandler = async (request, response) => {
@@ -97,5 +100,14 @@ export class AuthController {
     );
 
     response.status(200).json(session);
+  };
+
+  createCompany: RequestHandler = async (request, response) => {
+    const company = await this.createCompanyUseCase.execute(
+      createCompanySchema.parse(request.body),
+      getAuthContext(request),
+    );
+
+    response.status(201).json(company);
   };
 }

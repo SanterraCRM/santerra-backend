@@ -2,12 +2,13 @@ import { inject, injectable } from "tsyringe";
 
 import { TenantContext } from "../../../../shared/application/auth/auth-context";
 import { ConflictError } from "../../../../shared/errors/app-error";
-import { Reseller, ResellerProps } from "../../domain/entities/reseller";
+import { Reseller } from "../../domain/entities/reseller";
 import {
   RESELLER_REPOSITORY,
   ResellerRepository,
 } from "../../domain/repositories/reseller-repository";
 import { CreateResellerDto } from "../dtos/create-reseller-dto";
+import { ResellerDetailsDto, toResellerDetailsDto } from "../dtos/reseller-details-dto";
 
 @injectable()
 export class CreateResellerUseCase {
@@ -19,7 +20,7 @@ export class CreateResellerUseCase {
   async execute(
     input: CreateResellerDto,
     context: TenantContext,
-  ): Promise<ResellerProps> {
+  ): Promise<ResellerDetailsDto> {
     const reseller = Reseller.create({
       ...input,
       companyId: context.companyId,
@@ -38,6 +39,6 @@ export class CreateResellerUseCase {
 
     const createdReseller = await this.resellerRepository.create(reseller);
 
-    return createdReseller.toObject();
+    return toResellerDetailsDto(createdReseller);
   }
 }

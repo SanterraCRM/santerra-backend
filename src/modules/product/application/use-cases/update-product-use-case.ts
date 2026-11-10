@@ -1,15 +1,16 @@
 import { inject, injectable } from "tsyringe";
 
 import { TenantContext } from "../../../../shared/application/auth/auth-context";
-import { ResourceNotFoundError } from "../../../../shared/errors/app-error";
+import { PERMISSIONS } from "../../../../shared/application/auth/permissions";
+import { ForbiddenError, ResourceNotFoundError } from "../../../../shared/errors/app-error";
 import { FILE_REPOSITORY, FileRepository } from "../../../file";
 import { GROUP_REPOSITORY, GroupRepository } from "../../../group";
 import { MANUFACTURER_REPOSITORY, ManufacturerRepository } from "../../../manufacturer";
-import { ProductProps } from "../../domain/entities/product";
 import {
   PRODUCT_REPOSITORY,
   ProductRepository,
 } from "../../domain/repositories/product-repository";
+import { ProductDetailsDto, toProductDetailsDto } from "../dtos/product-details-dto";
 import { UpdateProductDto } from "../dtos/update-product-dto";
 
 @injectable()
@@ -29,14 +30,20 @@ export class UpdateProductUseCase {
     id: string,
     input: UpdateProductDto,
     context: TenantContext,
-  ): Promise<ProductProps> {
+  ): Promise<ProductDetailsDto> {
     const product = await this.productRepository.findById(id, context.companyId);
 
     if (!product) {
       throw new ResourceNotFoundError("Produto não encontrado.");
     }
 
+    const previousFileIds = product.fileIds;
     product.update({ ...input, updatedById: context.userId });
+    const removedFileIds = previousFileIds.filter((fileId) => !product.fileIds.includes(fileId));
+
+    if (removedFileIds.length > 0 && !context.permissions.includes(PERMISSIONS.FILES_DELETE)) {
+      throw new ForbiddenError("Você não tem permissão para remover anexos.");
+    }
 
     if (
       input.manufacturerId !== undefined &&
@@ -65,7 +72,8 @@ export class UpdateProductUseCase {
     }
 
     const updatedProduct = await this.productRepository.update(product);
+    await this.fileRepository.deleteUnlinked(removedFileIds, context.companyId, context.userId);
 
-    return updatedProduct.toObject();
+    return toProductDetailsDto(updatedProduct, context);
   }
 }

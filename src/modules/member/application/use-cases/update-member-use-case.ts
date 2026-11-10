@@ -7,11 +7,11 @@ import {
 } from "../../../../shared/errors/app-error";
 import { PermissionScope } from "../../../permission";
 import { ROLE_REPOSITORY, RoleRepository } from "../../../role";
-import { MemberProps } from "../../domain/entities/member";
 import {
   MEMBER_REPOSITORY,
   MemberRepository,
 } from "../../domain/repositories/member-repository";
+import { MemberDetailsDto, toMemberDetailsDto } from "../dtos/member-details-dto";
 import { UpdateMemberDto } from "../dtos/update-member-dto";
 
 @injectable()
@@ -28,7 +28,7 @@ export class UpdateMemberUseCase {
     id: string,
     input: UpdateMemberDto,
     context: TenantContext,
-  ): Promise<MemberProps> {
+  ): Promise<MemberDetailsDto> {
     const member = await this.memberRepository.findById(id, context.companyId);
 
     if (!member) {
@@ -65,6 +65,6 @@ export class UpdateMemberUseCase {
     member.update({ ...input, updatedById: context.userId });
     const updatedMember = await this.memberRepository.update(member);
 
-    return updatedMember.toObject();
+    return toMemberDetailsDto(updatedMember, context);
   }
 }

@@ -9,25 +9,16 @@ import {
   TokenProvider,
 } from "../../../../shared/application/cryptography/token-provider";
 import { ConflictError, ValidationError } from "../../../../shared/errors/app-error";
-import { Company } from "../../../company";
-import { Member } from "../../../member";
-import { PERMISSION_REPOSITORY, PermissionRepository } from "../../../permission";
-import { Role } from "../../../role";
 import { User, USER_REPOSITORY, UserRepository } from "../../../user";
 import { EmailVerification } from "../../domain/entities/email-verification";
-import {
-  AUTH_REPOSITORY,
-  AuthRepository,
-} from "../../domain/repositories/auth-repository";
 import {
   EMAIL_VERIFICATION_REPOSITORY,
   EmailVerificationRepository,
 } from "../../domain/repositories/email-verification-repository";
 import { SignUpDto } from "../dtos/sign-up-dto";
 import { SignUpResultDto } from "../dtos/sign-up-result-dto";
+import { CompanyOwnerCreator } from "../services/company-owner-creator";
 
-const OWNER_ROLE_NAME = "Administrador";
-const OWNER_ROLE_DESCRIPTION = "Acesso a todas as funcionalidades da empresa.";
 const EMAIL_NOT_VERIFIED_CODE = "EMAIL_NOT_VERIFIED";
 const EMAIL_NOT_VERIFIED_MESSAGE =
   "A confirmação do e-mail expirou. Confirme o e-mail novamente.";
@@ -35,18 +26,15 @@ const EMAIL_NOT_VERIFIED_MESSAGE =
 @injectable()
 export class SignUpUseCase {
   constructor(
-    @inject(AUTH_REPOSITORY)
-    private readonly authRepository: AuthRepository,
     @inject(EMAIL_VERIFICATION_REPOSITORY)
     private readonly emailVerificationRepository: EmailVerificationRepository,
     @inject(USER_REPOSITORY)
     private readonly userRepository: UserRepository,
-    @inject(PERMISSION_REPOSITORY)
-    private readonly permissionRepository: PermissionRepository,
     @inject(PASSWORD_HASHER)
     private readonly passwordHasher: PasswordHasher,
     @inject(TOKEN_PROVIDER)
     private readonly tokenProvider: TokenProvider,
+    private readonly companyOwnerCreator: CompanyOwnerCreator,
   ) {}
 
   async execute(input: SignUpDto): Promise<SignUpResultDto> {
@@ -70,35 +58,13 @@ export class SignUpUseCase {
       email,
       passwordHash: await this.passwordHasher.hash(input.password),
     });
-    const company = Company.create({
-      name: input.companyName,
-      createdById: user.id,
-    });
-    const permissions = await this.permissionRepository.findAll();
-    const ownerRole = Role.create({
-      name: OWNER_ROLE_NAME,
-      description: OWNER_ROLE_DESCRIPTION,
-      companyId: company.id,
-      permissionIds: permissions.map((permission) => permission.id),
-      createdById: user.id,
-    });
-    const owner = Member.create({
-      userId: user.id,
-      companyId: company.id,
-      name: user.name,
-      email: user.email,
-      isOwner: true,
-      roleIds: [ownerRole.id],
-      createdById: user.id,
-    });
 
     emailVerification.use();
 
-    await this.authRepository.createCompanyWithOwner({
-      user,
-      company,
-      ownerRole,
-      owner,
+    const company = await this.companyOwnerCreator.create({
+      owner: user,
+      companyName: input.companyName,
+      newUser: user,
       emailVerification,
     });
 

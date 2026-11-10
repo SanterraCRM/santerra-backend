@@ -94,8 +94,20 @@ export class Invitation {
     return this.props.createdById;
   }
 
+  get expiresAt(): Date {
+    return this.props.expiresAt;
+  }
+
   get isAccepted(): boolean {
     return this.props.acceptedAt !== null;
+  }
+
+  get isDeleted(): boolean {
+    return this.props.deletedAt !== null;
+  }
+
+  isExpired(now = new Date()): boolean {
+    return this.props.expiresAt <= now;
   }
 
   isPending(now = new Date()): boolean {

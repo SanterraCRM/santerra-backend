@@ -2,11 +2,11 @@ import { inject, injectable } from "tsyringe";
 
 import { TenantContext } from "../../../../shared/application/auth/auth-context";
 import { ResourceNotFoundError } from "../../../../shared/errors/app-error";
-import { EmployeeProps } from "../../domain/entities/employee";
 import {
   EMPLOYEE_REPOSITORY,
   EmployeeRepository,
 } from "../../domain/repositories/employee-repository";
+import { EmployeeListItemDto } from "../dtos/employee-list-item-dto";
 
 @injectable()
 export class GetEmployeeUseCase {
@@ -15,13 +15,13 @@ export class GetEmployeeUseCase {
     private readonly employeeRepository: EmployeeRepository,
   ) {}
 
-  async execute(id: string, context: TenantContext): Promise<EmployeeProps> {
-    const employee = await this.employeeRepository.findById(id, context.companyId);
+  async execute(id: string, context: TenantContext): Promise<EmployeeListItemDto> {
+    const item = await this.employeeRepository.findListItemById(id, context.companyId);
 
-    if (!employee) {
+    if (!item) {
       throw new ResourceNotFoundError("Funcionário não encontrado.");
     }
 
-    return employee.toObject();
+    return { ...item.employee.toObject(), person: item.person };
   }
 }

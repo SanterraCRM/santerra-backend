@@ -8,11 +8,13 @@ import {
   WalletCharge,
 } from "../../domain/entities/commercialAction";
 import {
+  CommercialActionDetails,
   CommercialActionRepository,
   FindCommercialActionsParams,
   FindCommercialActionsResult,
 } from "../../domain/repositories/commercialAction-repository";
 import {
+  commercialActionDetailsInclude,
   commercialActionInclude,
   PrismaCommercialActionMapper,
 } from "./prisma-commercialAction-mapper";
@@ -21,7 +23,7 @@ import {
 export class PrismaCommercialActionRepository implements CommercialActionRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
-  async create(commercialAction: CommercialAction): Promise<CommercialAction> {
+  async create(commercialAction: CommercialAction): Promise<CommercialActionDetails> {
     const props = commercialAction.toObject();
     const {
       producerGuestIds: _producerGuestIds,
@@ -37,11 +39,11 @@ export class PrismaCommercialActionRepository implements CommercialActionReposit
 
       return transaction.commercialAction.findUniqueOrThrow({
         where: { id: data.id },
-        include: commercialActionInclude,
+        include: commercialActionDetailsInclude,
       });
     });
 
-    return PrismaCommercialActionMapper.toDomain(createdCommercialAction);
+    return PrismaCommercialActionMapper.toDetails(createdCommercialAction);
   }
 
   async findById(
@@ -61,20 +63,36 @@ export class PrismaCommercialActionRepository implements CommercialActionReposit
     return commercialAction ? PrismaCommercialActionMapper.toDomain(commercialAction) : null;
   }
 
+  async findDetailsById(id: string, companyId: string): Promise<CommercialActionDetails | null> {
+    const commercialAction = await this.prisma.commercialAction.findFirst({
+      where: { id, companyId, deletedAt: null },
+      include: commercialActionDetailsInclude,
+    });
+
+    return commercialAction ? PrismaCommercialActionMapper.toDetails(commercialAction) : null;
+  }
+
   async findMany(params: FindCommercialActionsParams): Promise<FindCommercialActionsResult> {
     const where: Prisma.CommercialActionWhereInput = {
       companyId: params.companyId,
       deletedAt: params.includeDeleted ? undefined : null,
+      eventId: params.eventId,
+      responsibleId: params.responsibleId,
+      walletId: params.walletId,
+      initialDate: { gte: params.initialFrom, lte: params.initialTo },
       OR: params.search
-        ? [{ event: { is: { name: { contains: params.search, mode: "insensitive" } } } }]
+        ? [
+            { event: { name: { contains: params.search, mode: "insensitive" } } },
+            { description: { contains: params.search, mode: "insensitive" } },
+          ]
         : undefined,
     };
 
     const [commercialActions, total] = await this.prisma.$transaction([
       this.prisma.commercialAction.findMany({
         where,
-        include: commercialActionInclude,
-        orderBy: { createdAt: "desc" },
+        include: commercialActionDetailsInclude,
+        orderBy: [{ initialDate: { sort: "desc", nulls: "last" } }, { createdAt: "desc" }],
         skip: (params.page - 1) * params.limit,
         take: params.limit,
       }),
@@ -82,7 +100,7 @@ export class PrismaCommercialActionRepository implements CommercialActionReposit
     ]);
 
     return {
-      commercialActions: commercialActions.map(PrismaCommercialActionMapper.toDomain),
+      commercialActions: commercialActions.map(PrismaCommercialActionMapper.toDetails),
       total,
     };
   }
@@ -90,7 +108,7 @@ export class PrismaCommercialActionRepository implements CommercialActionReposit
   async update(
     commercialAction: CommercialAction,
     previousCharge: WalletCharge,
-  ): Promise<CommercialAction> {
+  ): Promise<CommercialActionDetails> {
     const props = commercialAction.toObject();
     const charge = commercialAction.charge;
     const updatedCommercialAction = await this.prisma.$transaction(async (transaction) => {
@@ -122,11 +140,11 @@ export class PrismaCommercialActionRepository implements CommercialActionReposit
           updatedAt: props.updatedAt,
           updatedById: props.updatedById,
         },
-        include: commercialActionInclude,
+        include: commercialActionDetailsInclude,
       });
     });
 
-    return PrismaCommercialActionMapper.toDomain(updatedCommercialAction);
+    return PrismaCommercialActionMapper.toDetails(updatedCommercialAction);
   }
 
   async delete(commercialAction: CommercialAction): Promise<void> {

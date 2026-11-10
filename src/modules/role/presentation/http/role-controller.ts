@@ -2,13 +2,13 @@ import { RequestHandler } from "express";
 import { injectable } from "tsyringe";
 
 import { getTenantContext } from "../../../../shared/http/request-context";
-import { idParamSchema, listQuerySchema } from "../../../../shared/http/request-schemas";
+import { idParamSchema } from "../../../../shared/http/request-schemas";
 import { CreateRoleUseCase } from "../../application/use-cases/create-role-use-case";
 import { DeleteRoleUseCase } from "../../application/use-cases/delete-role-use-case";
 import { GetRoleUseCase } from "../../application/use-cases/get-role-use-case";
 import { ListRolesUseCase } from "../../application/use-cases/list-roles-use-case";
 import { UpdateRoleUseCase } from "../../application/use-cases/update-role-use-case";
-import { createRoleSchema, updateRoleSchema } from "./role-schemas";
+import { createRoleSchema, listRolesQuerySchema, updateRoleSchema } from "./role-schemas";
 
 @injectable()
 export class RoleController {
@@ -31,7 +31,7 @@ export class RoleController {
 
   list: RequestHandler = async (request, response) => {
     const result = await this.listRolesUseCase.execute(
-      listQuerySchema.parse(request.query),
+      listRolesQuerySchema.parse(request.query),
       getTenantContext(request),
     );
 

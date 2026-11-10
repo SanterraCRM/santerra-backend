@@ -2,13 +2,17 @@ import { RequestHandler } from "express";
 import { injectable } from "tsyringe";
 
 import { getAuthContext } from "../../../../shared/http/request-context";
-import { idParamSchema, listQuerySchema } from "../../../../shared/http/request-schemas";
+import { idParamSchema } from "../../../../shared/http/request-schemas";
 import { CreateManufacturerUseCase } from "../../application/use-cases/create-manufacturer-use-case";
 import { DeleteManufacturerUseCase } from "../../application/use-cases/delete-manufacturer-use-case";
 import { GetManufacturerUseCase } from "../../application/use-cases/get-manufacturer-use-case";
 import { ListManufacturersUseCase } from "../../application/use-cases/list-manufacturers-use-case";
 import { UpdateManufacturerUseCase } from "../../application/use-cases/update-manufacturer-use-case";
-import { createManufacturerSchema, updateManufacturerSchema } from "./manufacturer-schemas";
+import {
+  createManufacturerSchema,
+  listManufacturersQuerySchema,
+  updateManufacturerSchema,
+} from "./manufacturer-schemas";
 
 @injectable()
 export class ManufacturerController {
@@ -31,7 +35,7 @@ export class ManufacturerController {
 
   list: RequestHandler = async (request, response) => {
     const result = await this.listManufacturersUseCase.execute(
-      listQuerySchema.parse(request.query),
+      listManufacturersQuerySchema.parse(request.query),
     );
 
     response.status(200).json(result);

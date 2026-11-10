@@ -7,11 +7,23 @@ import {
   FindInvitationsParams,
   FindInvitationsResult,
   InvitationRepository,
+  InvitationStatus,
 } from "../../domain/repositories/invitation-repository";
 import {
   PrismaInvitationMapper,
   invitationInclude,
 } from "./prisma-invitation-mapper";
+
+function statusFilter(status: InvitationStatus, now: Date): Prisma.InvitationWhereInput {
+  if (status === "accepted") {
+    return { acceptedAt: { not: null } };
+  }
+
+  return {
+    acceptedAt: null,
+    expiresAt: status === "pending" ? { gt: now } : { lte: now },
+  };
+}
 
 @injectable()
 export class PrismaInvitationRepository implements InvitationRepository {
@@ -84,6 +96,7 @@ export class PrismaInvitationRepository implements InvitationRepository {
       email: params.search
         ? { contains: params.search, mode: "insensitive" }
         : undefined,
+      ...(params.status ? statusFilter(params.status, new Date()) : {}),
     };
 
     const [invitations, total] = await this.prisma.$transaction([

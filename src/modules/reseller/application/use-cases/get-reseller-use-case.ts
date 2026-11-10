@@ -2,11 +2,11 @@ import { inject, injectable } from "tsyringe";
 
 import { TenantContext } from "../../../../shared/application/auth/auth-context";
 import { ResourceNotFoundError } from "../../../../shared/errors/app-error";
-import { ResellerProps } from "../../domain/entities/reseller";
 import {
   RESELLER_REPOSITORY,
   ResellerRepository,
 } from "../../domain/repositories/reseller-repository";
+import { ResellerDetailsDto, toResellerDetailsDto } from "../dtos/reseller-details-dto";
 
 @injectable()
 export class GetResellerUseCase {
@@ -15,13 +15,13 @@ export class GetResellerUseCase {
     private readonly resellerRepository: ResellerRepository,
   ) {}
 
-  async execute(id: string, context: TenantContext): Promise<ResellerProps> {
-    const reseller = await this.resellerRepository.findById(id, context.companyId);
+  async execute(id: string, context: TenantContext): Promise<ResellerDetailsDto> {
+    const reseller = await this.resellerRepository.findDetailsById(id, context.companyId);
 
     if (!reseller) {
       throw new ResourceNotFoundError("Revendedor não encontrado.");
     }
 
-    return reseller.toObject();
+    return toResellerDetailsDto(reseller);
   }
 }

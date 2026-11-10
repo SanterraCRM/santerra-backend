@@ -1,7 +1,13 @@
 import { Prisma } from "@prisma/client";
 
 import { CommercialTrip } from "../../domain/entities/commercialTrip";
+import {
+  CommercialTripDetails,
+  CommercialTripRelation,
+} from "../../domain/repositories/commercialTrip-repository";
 import { CommercialTripStatus } from "../../enumCommercialTrip/EnumCommercialTrip";
+
+const personName = { select: { id: true, person: { select: { name: true } } } } as const;
 
 export const commercialTripInclude = {
   participants: {
@@ -22,9 +28,47 @@ export const commercialTripInclude = {
   },
 } satisfies Prisma.CommercialTripInclude;
 
+export const commercialTripDetailsInclude = {
+  participants: {
+    where: { employee: { deletedAt: null } },
+    select: { employeeId: true, employee: personName },
+  },
+  harvests: {
+    where: { harvest: { deletedAt: null } },
+    select: { harvestId: true, harvest: { select: { id: true, name: true } } },
+  },
+  recommendations: {
+    where: { product: { deletedAt: null } },
+    select: { productId: true, product: { select: { id: true, name: true } } },
+  },
+  files: {
+    where: { file: { deletedAt: null } },
+    select: {
+      fileId: true,
+      file: { select: { id: true, originalName: true, mimeType: true, size: true } },
+    },
+  },
+  producer: personName,
+  responsible: personName,
+} satisfies Prisma.CommercialTripInclude;
+
 type PrismaCommercialTrip = Prisma.CommercialTripGetPayload<{
   include: typeof commercialTripInclude;
 }>;
+
+type PrismaCommercialTripDetails = Prisma.CommercialTripGetPayload<{
+  include: typeof commercialTripDetailsInclude;
+}>;
+
+type PersonRelation = { id: string; person: { name: string } };
+
+function toRelation({ id, person }: PersonRelation): CommercialTripRelation {
+  return { id, name: person.name };
+}
+
+function byName(first: CommercialTripRelation, second: CommercialTripRelation): number {
+  return first.name.localeCompare(second.name, "pt-BR");
+}
 
 export class PrismaCommercialTripMapper {
   static toDomain(raw: PrismaCommercialTrip): CommercialTrip {
@@ -50,5 +94,17 @@ export class PrismaCommercialTripMapper {
       updatedById: raw.updatedById,
       deletedById: raw.deletedById,
     });
+  }
+
+  static toDetails({ producer, responsible, ...raw }: PrismaCommercialTripDetails): CommercialTripDetails {
+    return {
+      commercialTrip: PrismaCommercialTripMapper.toDomain(raw),
+      producer: toRelation(producer),
+      responsible: toRelation(responsible),
+      participants: raw.participants.map(({ employee }) => toRelation(employee)).sort(byName),
+      harvests: raw.harvests.map(({ harvest }) => harvest).sort(byName),
+      recommendedProducts: raw.recommendations.map(({ product }) => product).sort(byName),
+      files: raw.files.map(({ file }) => file),
+    };
   }
 }

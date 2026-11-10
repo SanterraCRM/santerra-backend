@@ -2,11 +2,14 @@ import { inject, injectable } from "tsyringe";
 
 import { TenantContext } from "../../../../shared/application/auth/auth-context";
 import { ResourceNotFoundError } from "../../../../shared/errors/app-error";
-import { CommercialActionProps } from "../../domain/entities/commercialAction";
 import {
   COMMERCIAL_ACTION_REPOSITORY,
   CommercialActionRepository,
 } from "../../domain/repositories/commercialAction-repository";
+import {
+  CommercialActionDetailsDto,
+  toCommercialActionDetailsDto,
+} from "../dtos/commercialAction-details-dto";
 
 @injectable()
 export class GetCommercialActionUseCase {
@@ -15,13 +18,16 @@ export class GetCommercialActionUseCase {
     private readonly commercialActionRepository: CommercialActionRepository,
   ) {}
 
-  async execute(id: string, context: TenantContext): Promise<CommercialActionProps> {
-    const commercialAction = await this.commercialActionRepository.findById(id, context.companyId);
+  async execute(id: string, context: TenantContext): Promise<CommercialActionDetailsDto> {
+    const commercialAction = await this.commercialActionRepository.findDetailsById(
+      id,
+      context.companyId,
+    );
 
     if (!commercialAction) {
       throw new ResourceNotFoundError("Ação comercial não encontrada.");
     }
 
-    return commercialAction.toObject();
+    return toCommercialActionDetailsDto(commercialAction, context);
   }
 }

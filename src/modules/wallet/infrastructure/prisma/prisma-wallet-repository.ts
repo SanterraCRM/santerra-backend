@@ -1,23 +1,34 @@
 import { Prisma, PrismaClient } from "@prisma/client";
 import { injectable } from "tsyringe";
 
-import { Wallet } from "../../domain/entities/wallet";
+import { Wallet, WALLET_MAX_VALUE } from "../../domain/entities/wallet";
 import {
-  WalletRepository,
   FindWalletsParams,
   FindWalletsResult,
+  WalletDetails,
+  WalletRepository,
 } from "../../domain/repositories/wallet-repository";
-import { PrismaWalletMapper } from "./prisma-wallet-mapper";
+import {
+  ACTIVE_ACTIONS,
+  PrismaWalletMapper,
+  walletDetailsInclude,
+  walletListInclude,
+} from "./prisma-wallet-mapper";
+
+const BALANCE_FILTERS: Record<string, Prisma.WalletWhereInput> = {
+  empty: { value: { equals: 0 } },
+  positive: { value: { gt: 0 } },
+};
 
 @injectable()
 export class PrismaWalletRepository implements WalletRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
-  async create(wallet: Wallet): Promise<Wallet> {
+  async create(wallet: Wallet): Promise<WalletDetails> {
     const data = wallet.toObject();
-    const createdWallet = await this.prisma.wallet.create({ data });
+    const createdWallet = await this.prisma.wallet.create({ data, include: walletDetailsInclude });
 
-    return PrismaWalletMapper.toDomain(createdWallet);
+    return PrismaWalletMapper.toDetails(createdWallet);
   }
 
   async findById(
@@ -36,11 +47,29 @@ export class PrismaWalletRepository implements WalletRepository {
     return wallet ? PrismaWalletMapper.toDomain(wallet) : null;
   }
 
+  async findDetailsById(id: string, companyId: string): Promise<WalletDetails | null> {
+    const wallet = await this.prisma.wallet.findFirst({
+      where: { id, companyId, deletedAt: null },
+      include: walletDetailsInclude,
+    });
+
+    return wallet ? PrismaWalletMapper.toDetails(wallet) : null;
+  }
+
+  async findByUserCompanyId(userCompanyId: string, companyId: string): Promise<Wallet | null> {
+    const wallet = await this.prisma.wallet.findFirst({
+      where: { userCompanyId, companyId, deletedAt: null },
+    });
+
+    return wallet ? PrismaWalletMapper.toDomain(wallet) : null;
+  }
+
   async findMany(params: FindWalletsParams): Promise<FindWalletsResult> {
     const where: Prisma.WalletWhereInput = {
       companyId: params.companyId,
       userCompanyId: params.userCompanyId,
       deletedAt: params.includeDeleted ? undefined : null,
+      ...(params.balance ? BALANCE_FILTERS[params.balance] : {}),
       userCompany: params.search
         ? {
             user: {
@@ -56,6 +85,7 @@ export class PrismaWalletRepository implements WalletRepository {
     const [wallets, total] = await this.prisma.$transaction([
       this.prisma.wallet.findMany({
         where,
+        include: walletListInclude,
         orderBy: { createdAt: "desc" },
         skip: (params.page - 1) * params.limit,
         take: params.limit,
@@ -64,12 +94,41 @@ export class PrismaWalletRepository implements WalletRepository {
     ]);
 
     return {
-      wallets: wallets.map(PrismaWalletMapper.toDomain),
+      wallets: wallets.map(PrismaWalletMapper.toListItem),
       total,
     };
   }
 
-  async update(wallet: Wallet): Promise<Wallet> {
+  countActions(id: string, companyId: string): Promise<number> {
+    return this.prisma.commercialAction.count({
+      where: { walletId: id, companyId, ...ACTIVE_ACTIONS },
+    });
+  }
+
+  async credit(
+    id: string,
+    companyId: string,
+    amount: number,
+    updatedById: string,
+  ): Promise<boolean> {
+    const { count } = await this.prisma.wallet.updateMany({
+      where: {
+        id,
+        companyId,
+        deletedAt: null,
+        value: { lte: new Prisma.Decimal(WALLET_MAX_VALUE).minus(amount) },
+      },
+      data: {
+        value: { increment: amount },
+        updatedAt: new Date(),
+        updatedById,
+      },
+    });
+
+    return count === 1;
+  }
+
+  async update(wallet: Wallet): Promise<WalletDetails> {
     const data = wallet.toObject();
     const updatedWallet = await this.prisma.wallet.update({
       where: {
@@ -78,14 +137,14 @@ export class PrismaWalletRepository implements WalletRepository {
         deletedAt: null,
       },
       data: {
-        value: data.value,
         userCompanyId: data.userCompanyId,
         updatedAt: data.updatedAt,
         updatedById: data.updatedById,
       },
+      include: walletDetailsInclude,
     });
 
-    return PrismaWalletMapper.toDomain(updatedWallet);
+    return PrismaWalletMapper.toDetails(updatedWallet);
   }
 
   async delete(wallet: Wallet): Promise<void> {

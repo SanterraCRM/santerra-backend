@@ -26,7 +26,7 @@ import { CreateInvitationDto } from "../dtos/create-invitation-dto";
 
 const INVITATION_TTL_IN_DAYS = 7;
 const MILLISECONDS_PER_DAY = 24 * 60 * 60 * 1000;
-const DEFAULT_ACCEPT_URL = "http://localhost:3000/convites/aceitar";
+const DEFAULT_ACCEPT_URL = "http://localhost:3000/auth/accept-invitation";
 
 @injectable()
 export class CreateInvitationUseCase {

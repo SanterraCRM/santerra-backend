@@ -1,7 +1,10 @@
 import { inject, injectable } from "tsyringe";
 
 import { TenantContext } from "../../../../shared/application/auth/auth-context";
-import { ResourceNotFoundError } from "../../../../shared/errors/app-error";
+import {
+  ResourceInUseError,
+  ResourceNotFoundError,
+} from "../../../../shared/errors/app-error";
 import { PermissionScope } from "../../../permission";
 import {
   ROLE_REPOSITORY,
@@ -24,6 +27,14 @@ export class DeleteRoleUseCase {
     }
 
     await this.permissionScope.ensureWithin(role.permissionIds, context);
+
+    const membersCount = await this.roleRepository.countMembers(role.id, context.companyId);
+
+    if (membersCount > 0) {
+      const members = membersCount === 1 ? "1 membro" : `${membersCount} membros`;
+
+      throw new ResourceInUseError(`Este cargo está atribuído a ${members}.`);
+    }
 
     role.delete(context.userId);
     await this.roleRepository.delete(role);

@@ -38,6 +38,14 @@ export class PrismaEventRepository implements EventRepository {
     return event ? PrismaEventMapper.toDomain(event) : null;
   }
 
+  async findByName(name: string, companyId: string): Promise<Event | null> {
+    const event = await this.prisma.event.findFirst({
+      where: { name, companyId, deletedAt: null },
+    });
+
+    return event ? PrismaEventMapper.toDomain(event) : null;
+  }
+
   async findMany(params: FindEventsParams): Promise<FindEventsResult> {
     const where: Prisma.EventWhereInput = {
       companyId: params.companyId,

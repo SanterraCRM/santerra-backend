@@ -4,6 +4,11 @@ import {
   AUTHENTICATOR,
   Authenticator,
 } from "../../shared/application/auth/authenticator";
+import {
+  PLATFORM_COMPANY_CREATOR,
+  PlatformCompanyCreator,
+} from "../../shared/application/companies/platform-company-creator";
+import { PlatformCompanyCreatorService } from "./application/services/platform-company-creator-service";
 import { AuthenticateUseCase } from "./application/use-cases/authenticate-use-case";
 import {
   AUTH_REPOSITORY,
@@ -22,6 +27,10 @@ import { PrismaEmailVerificationRepository } from "./infrastructure/prisma/prism
 import { PrismaPasswordResetRepository } from "./infrastructure/prisma/prisma-password-reset-repository";
 
 container.registerSingleton<AuthRepository>(AUTH_REPOSITORY, PrismaAuthRepository);
+
+container.register<PlatformCompanyCreator>(PLATFORM_COMPANY_CREATOR, {
+  useClass: PlatformCompanyCreatorService,
+});
 
 container.registerSingleton<EmailVerificationRepository>(
   EMAIL_VERIFICATION_REPOSITORY,

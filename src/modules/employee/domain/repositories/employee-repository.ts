@@ -38,6 +38,7 @@ export interface EmployeeRepository {
   findByPersonId(personId: string, companyId: string): Promise<Employee | null>;
   findByUserCompanyId(userCompanyId: string, companyId: string): Promise<Employee | null>;
   findManyByIds(ids: string[], companyId: string): Promise<Employee[]>;
+  findListItemById(id: string, companyId: string): Promise<EmployeeListItem | null>;
   findMany(params: FindEmployeesParams): Promise<FindEmployeesResult>;
   countCommercialUsage(id: string, companyId: string): Promise<CommercialUsage>;
   update(employee: Employee): Promise<Employee>;

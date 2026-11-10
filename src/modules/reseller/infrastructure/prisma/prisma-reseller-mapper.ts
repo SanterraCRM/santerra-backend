@@ -1,6 +1,19 @@
-import { Reseller as PrismaReseller } from "@prisma/client";
+import { Prisma, Reseller as PrismaReseller } from "@prisma/client";
 
 import { Reseller } from "../../domain/entities/reseller";
+import { ResellerDetails } from "../../domain/repositories/reseller-repository";
+
+export const resellerDetailsInclude = {
+  _count: {
+    select: {
+      commercialActionGuests: { where: { commercialAction: { deletedAt: null } } },
+    },
+  },
+} satisfies Prisma.ResellerInclude;
+
+type PrismaResellerDetails = Prisma.ResellerGetPayload<{
+  include: typeof resellerDetailsInclude;
+}>;
 
 export class PrismaResellerMapper {
   static toDomain(raw: PrismaReseller): Reseller {
@@ -18,5 +31,12 @@ export class PrismaResellerMapper {
       updatedById: raw.updatedById,
       deletedById: raw.deletedById,
     });
+  }
+
+  static toDetails({ _count, ...raw }: PrismaResellerDetails): ResellerDetails {
+    return {
+      reseller: PrismaResellerMapper.toDomain(raw),
+      actionsCount: _count.commercialActionGuests,
+    };
   }
 }

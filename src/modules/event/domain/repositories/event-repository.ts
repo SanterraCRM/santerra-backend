@@ -29,6 +29,7 @@ export interface EventRepository {
     companyId: string,
     includeDeleted?: boolean,
   ): Promise<Event | null>;
+  findByName(name: string, companyId: string): Promise<Event | null>;
   findMany(params: FindEventsParams): Promise<FindEventsResult>;
   countActions(id: string, companyId: string): Promise<number>;
   update(event: Event): Promise<Event>;

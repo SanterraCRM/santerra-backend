@@ -106,4 +106,26 @@ export class PrismaFileRepository implements FileRepository {
       },
     });
   }
+
+  async deleteUnlinked(
+    ids: string[],
+    companyId: string,
+    deletedById: string | null,
+  ): Promise<void> {
+    if (ids.length === 0) {
+      return;
+    }
+
+    await this.prisma.file.updateMany({
+      where: {
+        id: { in: ids },
+        companyId,
+        deletedAt: null,
+        products: { none: { product: { deletedAt: null } } },
+        commercialTrips: { none: { commercialTrip: { deletedAt: null } } },
+        commercialActions: { none: { commercialAction: { deletedAt: null } } },
+      },
+      data: { deletedAt: new Date(), deletedById },
+    });
+  }
 }

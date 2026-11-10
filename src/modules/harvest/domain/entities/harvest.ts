@@ -49,6 +49,14 @@ export class Harvest {
     return new Harvest({ ...props });
   }
 
+  get id(): string {
+    return this.props.id;
+  }
+
+  get name(): string {
+    return this.props.name;
+  }
+
   update(input: UpdateHarvestProps, updatedAt = new Date()): void {
     if (input.name !== undefined) {
       this.props.name = Harvest.normalizeName(input.name);
@@ -69,7 +77,7 @@ export class Harvest {
 
   private static normalizeName(name: string): string {
     if (typeof name !== "string" || name.trim().length === 0) {
-      throw new DomainError("O nome da colheita é obrigatória.");
+      throw new DomainError("O nome da cultura é obrigatório.");
     }
 
     return name.trim();

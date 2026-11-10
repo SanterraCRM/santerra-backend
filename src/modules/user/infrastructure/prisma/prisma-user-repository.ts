@@ -45,6 +45,7 @@ export class PrismaUserRepository implements UserRepository {
   async findMany(params: FindUsersParams): Promise<FindUsersResult> {
     const where: Prisma.UserWhereInput = {
       deletedAt: params.includeDeleted ? undefined : null,
+      active: params.active,
       OR: params.search
         ? [
             { name: { contains: params.search, mode: "insensitive" } },

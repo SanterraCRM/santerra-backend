@@ -2,14 +2,17 @@ import { RequestHandler } from "express";
 import { injectable } from "tsyringe";
 
 import { getTenantContext } from "../../../../shared/http/request-context";
-import { idParamSchema, listQuerySchema } from "../../../../shared/http/request-schemas";
+import { idParamSchema } from "../../../../shared/http/request-schemas";
 import { AcceptInvitationUseCase } from "../../application/use-cases/accept-invitation-use-case";
 import { CreateInvitationUseCase } from "../../application/use-cases/create-invitation-use-case";
 import { DeleteInvitationUseCase } from "../../application/use-cases/delete-invitation-use-case";
 import { ListInvitationsUseCase } from "../../application/use-cases/list-invitations-use-case";
+import { PreviewInvitationUseCase } from "../../application/use-cases/preview-invitation-use-case";
 import {
   acceptInvitationSchema,
   createInvitationSchema,
+  listInvitationsQuerySchema,
+  previewInvitationQuerySchema,
 } from "./invitation-schemas";
 
 @injectable()
@@ -19,7 +22,15 @@ export class InvitationController {
     private readonly listInvitationsUseCase: ListInvitationsUseCase,
     private readonly deleteInvitationUseCase: DeleteInvitationUseCase,
     private readonly acceptInvitationUseCase: AcceptInvitationUseCase,
+    private readonly previewInvitationUseCase: PreviewInvitationUseCase,
   ) {}
+
+  preview: RequestHandler = async (request, response) => {
+    const { token } = previewInvitationQuerySchema.parse(request.query);
+    const preview = await this.previewInvitationUseCase.execute(token);
+
+    response.status(200).json(preview);
+  };
 
   create: RequestHandler = async (request, response) => {
     const invitation = await this.createInvitationUseCase.execute(
@@ -32,7 +43,7 @@ export class InvitationController {
 
   list: RequestHandler = async (request, response) => {
     const result = await this.listInvitationsUseCase.execute(
-      listQuerySchema.parse(request.query),
+      listInvitationsQuerySchema.parse(request.query),
       getTenantContext(request),
     );
 

@@ -1,6 +1,7 @@
 import { Prisma } from "@prisma/client";
 
 import { Member } from "../../domain/entities/member";
+import { MemberDetails } from "../../domain/repositories/member-repository";
 
 export const memberInclude = {
   user: { select: { name: true, email: true } },
@@ -10,7 +11,21 @@ export const memberInclude = {
   },
 } satisfies Prisma.UserCompanyInclude;
 
+export const memberDetailsInclude = {
+  ...memberInclude,
+  employee: {
+    select: {
+      id: true,
+      deletedAt: true,
+      person: { select: { id: true, name: true, deletedAt: true } },
+    },
+  },
+} satisfies Prisma.UserCompanyInclude;
+
 type PrismaMember = Prisma.UserCompanyGetPayload<{ include: typeof memberInclude }>;
+type PrismaMemberDetails = Prisma.UserCompanyGetPayload<{
+  include: typeof memberDetailsInclude;
+}>;
 
 export class PrismaMemberMapper {
   static toDomain(raw: PrismaMember): Member {
@@ -30,5 +45,16 @@ export class PrismaMemberMapper {
       updatedById: raw.updatedById,
       deletedById: raw.deletedById,
     });
+  }
+
+  static toDetails({ employee, ...raw }: PrismaMemberDetails): MemberDetails {
+    const isActiveEmployee = employee && !employee.deletedAt && !employee.person.deletedAt;
+
+    return {
+      member: PrismaMemberMapper.toDomain(raw),
+      employee: isActiveEmployee
+        ? { id: employee.id, person: { id: employee.person.id, name: employee.person.name } }
+        : null,
+    };
   }
 }

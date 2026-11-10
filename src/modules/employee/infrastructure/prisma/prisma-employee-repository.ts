@@ -5,6 +5,7 @@ import { CommercialUsage } from "../../../../shared/domain/commercial-usage";
 import { countCommercialUsage } from "../../../../shared/infrastructure/database/count-commercial-usage";
 import { Employee } from "../../domain/entities/employee";
 import {
+  EmployeeListItem,
   EmployeeRepository,
   FindEmployeesParams,
   FindEmployeesResult,
@@ -75,6 +76,17 @@ export class PrismaEmployeeRepository implements EmployeeRepository {
     });
 
     return employees.map(PrismaEmployeeMapper.toDomain);
+  }
+
+  async findListItemById(id: string, companyId: string): Promise<EmployeeListItem | null> {
+    const employee = await this.prisma.employee.findFirst({
+      where: { id, companyId, deletedAt: null },
+      include: { person: { select: { id: true, name: true, nationalId: true } } },
+    });
+
+    return employee
+      ? { employee: PrismaEmployeeMapper.toDomain(employee), person: employee.person }
+      : null;
   }
 
   async findMany(params: FindEmployeesParams): Promise<FindEmployeesResult> {

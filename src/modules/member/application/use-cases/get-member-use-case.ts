@@ -2,11 +2,11 @@ import { inject, injectable } from "tsyringe";
 
 import { TenantContext } from "../../../../shared/application/auth/auth-context";
 import { ResourceNotFoundError } from "../../../../shared/errors/app-error";
-import { MemberProps } from "../../domain/entities/member";
 import {
   MEMBER_REPOSITORY,
   MemberRepository,
 } from "../../domain/repositories/member-repository";
+import { MemberDetailsDto, toMemberDetailsDto } from "../dtos/member-details-dto";
 
 @injectable()
 export class GetMemberUseCase {
@@ -15,13 +15,13 @@ export class GetMemberUseCase {
     private readonly memberRepository: MemberRepository,
   ) {}
 
-  async execute(id: string, context: TenantContext): Promise<MemberProps> {
-    const member = await this.memberRepository.findById(id, context.companyId);
+  async execute(id: string, context: TenantContext): Promise<MemberDetailsDto> {
+    const member = await this.memberRepository.findDetailsById(id, context.companyId);
 
     if (!member) {
       throw new ResourceNotFoundError("Membro não encontrado.");
     }
 
-    return member.toObject();
+    return toMemberDetailsDto(member, context);
   }
 }

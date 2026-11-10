@@ -2,13 +2,17 @@ import { RequestHandler } from "express";
 import { injectable } from "tsyringe";
 
 import { getAuthContext } from "../../../../shared/http/request-context";
-import { idParamSchema, listQuerySchema } from "../../../../shared/http/request-schemas";
+import { idParamSchema } from "../../../../shared/http/request-schemas";
 import { CreateUserUseCase } from "../../application/use-cases/create-user-use-case";
 import { DeleteUserUseCase } from "../../application/use-cases/delete-user-use-case";
 import { GetUserUseCase } from "../../application/use-cases/get-user-use-case";
 import { ListUsersUseCase } from "../../application/use-cases/list-users-use-case";
 import { UpdateUserUseCase } from "../../application/use-cases/update-user-use-case";
-import { createUserSchema, updateUserSchema } from "./user-schemas";
+import {
+  createUserSchema,
+  listUsersQuerySchema,
+  updateUserSchema,
+} from "./user-schemas";
 
 @injectable()
 export class UserController {
@@ -31,7 +35,7 @@ export class UserController {
 
   list: RequestHandler = async (request, response) => {
     const result = await this.listUsersUseCase.execute(
-      listQuerySchema.parse(request.query),
+      listUsersQuerySchema.parse(request.query),
     );
 
     response.status(200).json(result);

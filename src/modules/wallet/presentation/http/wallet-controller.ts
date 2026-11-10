@@ -4,12 +4,14 @@ import { injectable } from "tsyringe";
 import { getTenantContext } from "../../../../shared/http/request-context";
 import { idParamSchema } from "../../../../shared/http/request-schemas";
 import { CreateWalletUseCase } from "../../application/use-cases/create-wallet-use-case";
+import { CreditWalletUseCase } from "../../application/use-cases/credit-wallet-use-case";
 import { DeleteWalletUseCase } from "../../application/use-cases/delete-wallet-use-case";
 import { GetWalletUseCase } from "../../application/use-cases/get-wallet-use-case";
 import { ListWalletsUseCase } from "../../application/use-cases/list-wallets-use-case";
 import { UpdateWalletUseCase } from "../../application/use-cases/update-wallet-use-case";
 import {
   createWalletSchema,
+  creditWalletSchema,
   listWalletsQuerySchema,
   updateWalletSchema,
 } from "./wallet-schemas";
@@ -22,6 +24,7 @@ export class WalletController {
     private readonly getWalletUseCase: GetWalletUseCase,
     private readonly updateWalletUseCase: UpdateWalletUseCase,
     private readonly deleteWalletUseCase: DeleteWalletUseCase,
+    private readonly creditWalletUseCase: CreditWalletUseCase,
   ) {}
 
   create: RequestHandler = async (request, response) => {
@@ -57,6 +60,17 @@ export class WalletController {
     const wallet = await this.updateWalletUseCase.execute(
       id,
       updateWalletSchema.parse(request.body),
+      getTenantContext(request),
+    );
+
+    response.status(200).json(wallet);
+  };
+
+  credit: RequestHandler = async (request, response) => {
+    const { id } = idParamSchema.parse(request.params);
+    const wallet = await this.creditWalletUseCase.execute(
+      id,
+      creditWalletSchema.parse(request.body),
       getTenantContext(request),
     );
 

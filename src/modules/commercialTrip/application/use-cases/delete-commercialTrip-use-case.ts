@@ -18,7 +18,7 @@ export class DeleteCommercialTripUseCase {
     const commercialTrip = await this.commercialTripRepository.findById(id, context.companyId);
 
     if (!commercialTrip) {
-      throw new ResourceNotFoundError("Viagem comercial não encontrada.");
+      throw new ResourceNotFoundError("Visita não encontrada.");
     }
 
     commercialTrip.delete(context.userId);

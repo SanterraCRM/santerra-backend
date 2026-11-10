@@ -2,11 +2,11 @@ import { inject, injectable } from "tsyringe";
 
 import { TenantContext } from "../../../../shared/application/auth/auth-context";
 import { ResourceNotFoundError } from "../../../../shared/errors/app-error";
-import { ProductProps } from "../../domain/entities/product";
 import {
   PRODUCT_REPOSITORY,
   ProductRepository,
 } from "../../domain/repositories/product-repository";
+import { ProductDetailsDto, toProductDetailsDto } from "../dtos/product-details-dto";
 
 @injectable()
 export class GetProductUseCase {
@@ -15,13 +15,13 @@ export class GetProductUseCase {
     private readonly productRepository: ProductRepository,
   ) {}
 
-  async execute(id: string, context: TenantContext): Promise<ProductProps> {
-    const product = await this.productRepository.findById(id, context.companyId);
+  async execute(id: string, context: TenantContext): Promise<ProductDetailsDto> {
+    const product = await this.productRepository.findDetailsById(id, context.companyId);
 
     if (!product) {
       throw new ResourceNotFoundError("Produto não encontrado.");
     }
 
-    return product.toObject();
+    return toProductDetailsDto(product, context);
   }
 }

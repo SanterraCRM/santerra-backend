@@ -8,6 +8,7 @@ import {
   ProducerRepository,
   FindProducersParams,
   FindProducersResult,
+  ProducerListItem,
 } from "../../domain/repositories/producer-repository";
 import { PrismaProducerMapper } from "./prisma-producer-mapper";
 
@@ -63,6 +64,17 @@ export class PrismaProducerRepository implements ProducerRepository {
     });
 
     return producers.map(PrismaProducerMapper.toDomain);
+  }
+
+  async findListItemById(id: string, companyId: string): Promise<ProducerListItem | null> {
+    const producer = await this.prisma.producer.findFirst({
+      where: { id, companyId, deletedAt: null },
+      include: { person: { select: { id: true, name: true, nationalId: true } } },
+    });
+
+    return producer
+      ? { producer: PrismaProducerMapper.toDomain(producer), person: producer.person }
+      : null;
   }
 
   async findMany(params: FindProducersParams): Promise<FindProducersResult> {

@@ -20,11 +20,11 @@ export interface CompanyAccess {
 }
 
 export interface CreateCompanyWithOwnerParams {
-  user: User;
+  user?: User;
   company: Company;
   ownerRole: Role;
   owner: Member;
-  emailVerification: EmailVerification;
+  emailVerification?: EmailVerification;
 }
 
 export interface AuthRepository {

@@ -7,11 +7,18 @@ export interface FindRolesParams {
   page: number;
   limit: number;
   search?: string;
+  createdFrom?: Date;
+  createdTo?: Date;
   includeDeleted: boolean;
 }
 
+export interface RoleListItem {
+  role: Role;
+  membersCount: number;
+}
+
 export interface FindRolesResult {
-  roles: Role[];
+  roles: RoleListItem[];
   total: number;
 }
 
@@ -25,6 +32,7 @@ export interface RoleRepository {
   findByName(name: string, companyId: string): Promise<Role | null>;
   findManyByIds(ids: string[], companyId: string): Promise<Role[]>;
   findMany(params: FindRolesParams): Promise<FindRolesResult>;
+  countMembers(id: string, companyId: string): Promise<number>;
   update(role: Role): Promise<Role>;
   delete(role: Role): Promise<void>;
 }

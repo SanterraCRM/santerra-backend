@@ -3,6 +3,7 @@ import { inject, injectable } from "tsyringe";
 import { TenantContext } from "../../../../shared/application/auth/auth-context";
 import {
   ForbiddenError,
+  ResourceInUseError,
   ResourceNotFoundError,
 } from "../../../../shared/errors/app-error";
 import { PermissionScope } from "../../../permission";
@@ -45,6 +46,23 @@ export class DeleteMemberUseCase {
       roles.flatMap((role) => role.permissionIds),
       context,
     );
+
+    const wallet = await this.memberRepository.findWalletUsage(member.id, context.companyId);
+
+    if (wallet && wallet.actionsCount > 0) {
+      const actions =
+        wallet.actionsCount === 1 ? "1 ação comercial" : `${wallet.actionsCount} ações comerciais`;
+
+      throw new ResourceInUseError(
+        `A carteira deste membro está em uso por ${actions}. Desative o membro em vez de removê-lo.`,
+      );
+    }
+
+    if (wallet && wallet.balance > 0) {
+      throw new ResourceInUseError(
+        "A carteira deste membro ainda tem saldo. Desative o membro ou exclua a carteira antes de removê-lo.",
+      );
+    }
 
     member.delete(context.userId);
     await this.memberRepository.delete(member);

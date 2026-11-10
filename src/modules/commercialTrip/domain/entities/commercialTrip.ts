@@ -70,7 +70,7 @@ export class CommercialTrip {
     const producerId = CommercialTrip.normalizeProducerId(input.producerId);
     const responsibleId = CommercialTrip.normalizeResponsibleId(input.responsibleId);
 
-    return new CommercialTrip({
+    const commercialTrip = new CommercialTrip({
       id,
       performedActionDescription: input.performedActionDescription ?? null,
       followUpDetails: input.followUpDetails ?? null,
@@ -92,6 +92,10 @@ export class CommercialTrip {
       updatedById: null,
       deletedById: null,
     });
+
+    commercialTrip.ensureConsistency();
+
+    return commercialTrip;
   }
 
   static reconstitute(props: CommercialTripProps): CommercialTrip {
@@ -178,8 +182,19 @@ export class CommercialTrip {
       this.props.fileIds = CommercialTrip.normalizeIds(input.fileIds);
     }
 
+    this.ensureConsistency();
     this.props.updatedById = input.updatedById ?? null;
     this.props.updatedAt = updatedAt;
+  }
+
+  private ensureConsistency(): void {
+    if (this.props.status === CommercialTripStatus.COMPLETED && this.props.tripDate === null) {
+      throw new DomainError("Informe a data realizada para finalizar a visita.");
+    }
+
+    if (this.props.participantIds.includes(this.props.responsibleId)) {
+      throw new DomainError("O responsável não pode estar entre os participantes.");
+    }
   }
 
   delete(deletedById: string | null = null, deletedAt = new Date()): void {

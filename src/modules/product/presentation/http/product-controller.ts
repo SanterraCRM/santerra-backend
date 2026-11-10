@@ -2,13 +2,17 @@ import { RequestHandler } from "express";
 import { injectable } from "tsyringe";
 
 import { getTenantContext } from "../../../../shared/http/request-context";
-import { idParamSchema, listQuerySchema } from "../../../../shared/http/request-schemas";
+import { idParamSchema } from "../../../../shared/http/request-schemas";
 import { CreateProductUseCase } from "../../application/use-cases/create-product-use-case";
 import { DeleteProductUseCase } from "../../application/use-cases/delete-product-use-case";
 import { GetProductUseCase } from "../../application/use-cases/get-product-use-case";
 import { ListProductsUseCase } from "../../application/use-cases/list-products-use-case";
 import { UpdateProductUseCase } from "../../application/use-cases/update-product-use-case";
-import { createProductSchema, updateProductSchema } from "./product-schemas";
+import {
+  createProductSchema,
+  listProductsQuerySchema,
+  updateProductSchema,
+} from "./product-schemas";
 
 @injectable()
 export class ProductController {
@@ -31,7 +35,7 @@ export class ProductController {
 
   list: RequestHandler = async (request, response) => {
     const result = await this.listProductsUseCase.execute(
-      listQuerySchema.parse(request.query),
+      listProductsQuerySchema.parse(request.query),
       getTenantContext(request),
     );
 

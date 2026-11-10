@@ -1,7 +1,7 @@
 import { inject, injectable } from "tsyringe";
 
 import { TenantContext } from "../../../../shared/application/auth/auth-context";
-import { ResourceNotFoundError } from "../../../../shared/errors/app-error";
+import { ResourceInUseError, ResourceNotFoundError } from "../../../../shared/errors/app-error";
 import {
   WALLET_REPOSITORY,
   WalletRepository,
@@ -19,6 +19,14 @@ export class DeleteWalletUseCase {
 
     if (!wallet) {
       throw new ResourceNotFoundError("Carteira não encontrada.");
+    }
+
+    const actionsCount = await this.walletRepository.countActions(id, context.companyId);
+
+    if (actionsCount > 0) {
+      const actions = actionsCount === 1 ? "1 ação comercial" : `${actionsCount} ações comerciais`;
+
+      throw new ResourceInUseError(`Esta carteira está em uso por ${actions}.`);
     }
 
     wallet.delete(context.userId);

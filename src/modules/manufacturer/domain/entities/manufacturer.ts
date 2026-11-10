@@ -67,6 +67,14 @@ export class Manufacturer {
     return new Manufacturer({ ...props });
   }
 
+  get id(): string {
+    return this.props.id;
+  }
+
+  get name(): string {
+    return this.props.name;
+  }
+
   update(input: UpdateManufacturerProps, updatedAt = new Date()): void {
     if (input.name !== undefined) {
       this.props.name = Manufacturer.normalizeName(input.name);

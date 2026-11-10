@@ -1,6 +1,10 @@
 import { z } from "zod";
 
-import { passwordSchema } from "../../../../shared/http/request-schemas";
+import {
+  booleanQuerySchema,
+  listQuerySchema,
+  passwordSchema,
+} from "../../../../shared/http/request-schemas";
 
 export const createUserSchema = z.object({
   name: z.string(),
@@ -14,3 +18,7 @@ export const updateUserSchema = createUserSchema
   .refine((data) => Object.keys(data).length > 0, {
     message: "Informe ao menos um campo para atualizar.",
   });
+
+export const listUsersQuerySchema = listQuerySchema.extend({
+  active: booleanQuerySchema.optional(),
+});

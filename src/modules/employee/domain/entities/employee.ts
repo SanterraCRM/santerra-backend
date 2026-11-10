@@ -80,6 +80,10 @@ export class Employee {
     return this.props.userCompanyId;
   }
 
+  isActive(now = new Date()): boolean {
+    return this.props.terminatedAt === null || this.props.terminatedAt > now;
+  }
+
   update(input: UpdateEmployeeProps, updatedAt = new Date()): void {
     if (input.personId !== undefined) {
       this.props.personId = Employee.normalizePersonId(input.personId);

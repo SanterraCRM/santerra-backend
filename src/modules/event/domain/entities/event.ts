@@ -60,6 +60,10 @@ export class Event {
     return this.props.id;
   }
 
+  get name(): string {
+    return this.props.name;
+  }
+
   update(input: UpdateEventProps, updatedAt = new Date()): void {
     if (input.name !== undefined) {
       this.props.name = Event.normalizeName(input.name);

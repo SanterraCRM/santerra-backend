@@ -5,11 +5,11 @@ import {
   ConflictError,
   ResourceNotFoundError,
 } from "../../../../shared/errors/app-error";
-import { ResellerProps } from "../../domain/entities/reseller";
 import {
   RESELLER_REPOSITORY,
   ResellerRepository,
 } from "../../domain/repositories/reseller-repository";
+import { ResellerDetailsDto, toResellerDetailsDto } from "../dtos/reseller-details-dto";
 import { UpdateResellerDto } from "../dtos/update-reseller-dto";
 
 @injectable()
@@ -23,7 +23,7 @@ export class UpdateResellerUseCase {
     id: string,
     input: UpdateResellerDto,
     context: TenantContext,
-  ): Promise<ResellerProps> {
+  ): Promise<ResellerDetailsDto> {
     const reseller = await this.resellerRepository.findById(id, context.companyId);
 
     if (!reseller) {
@@ -45,6 +45,6 @@ export class UpdateResellerUseCase {
 
     const updatedReseller = await this.resellerRepository.update(reseller);
 
-    return updatedReseller.toObject();
+    return toResellerDetailsDto(updatedReseller);
   }
 }

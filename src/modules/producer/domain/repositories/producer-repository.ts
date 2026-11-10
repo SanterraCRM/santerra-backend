@@ -37,6 +37,7 @@ export interface ProducerRepository {
   ): Promise<Producer | null>;
   findByPersonId(personId: string, companyId: string): Promise<Producer | null>;
   findManyByIds(ids: string[], companyId: string): Promise<Producer[]>;
+  findListItemById(id: string, companyId: string): Promise<ProducerListItem | null>;
   findMany(params: FindProducersParams): Promise<FindProducersResult>;
   countCommercialUsage(id: string, companyId: string): Promise<CommercialUsage>;
   update(producer: Producer): Promise<Producer>;

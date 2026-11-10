@@ -1,11 +1,15 @@
 import { inject, injectable } from "tsyringe";
 
 import { TenantContext } from "../../../../shared/application/auth/auth-context";
-import { CommercialTrip, CommercialTripProps } from "../../domain/entities/commercialTrip";
+import { CommercialTrip } from "../../domain/entities/commercialTrip";
 import {
   COMMERCIAL_TRIP_REPOSITORY,
   CommercialTripRepository,
 } from "../../domain/repositories/commercialTrip-repository";
+import {
+  CommercialTripDetailsDto,
+  toCommercialTripDetailsDto,
+} from "../dtos/commercialTrip-details-dto";
 import { CreateCommercialTripDto } from "../dtos/create-commercialTrip-dto";
 import { CommercialTripReferences } from "../services/commercial-trip-references";
 
@@ -20,7 +24,7 @@ export class CreateCommercialTripUseCase {
   async execute(
     input: CreateCommercialTripDto,
     context: TenantContext,
-  ): Promise<CommercialTripProps> {
+  ): Promise<CommercialTripDetailsDto> {
     const commercialTrip = CommercialTrip.create({
       ...input,
       companyId: context.companyId,
@@ -31,6 +35,6 @@ export class CreateCommercialTripUseCase {
 
     const createdCommercialTrip = await this.commercialTripRepository.create(commercialTrip);
 
-    return createdCommercialTrip.toObject();
+    return toCommercialTripDetailsDto(createdCommercialTrip, context);
   }
 }

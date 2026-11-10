@@ -1,11 +1,11 @@
 import { inject, injectable } from "tsyringe";
 
 import { ResourceNotFoundError } from "../../../../shared/errors/app-error";
-import { CompanyProps } from "../../domain/entities/company";
 import {
   COMPANY_REPOSITORY,
   CompanyRepository,
 } from "../../domain/repositories/company-repository";
+import { CompanyDetailsDto, toCompanyDetailsDto } from "../dtos/company-details-dto";
 
 @injectable()
 export class GetCompanyUseCase {
@@ -14,13 +14,13 @@ export class GetCompanyUseCase {
     private readonly companyRepository: CompanyRepository,
   ) {}
 
-  async execute(id: string): Promise<CompanyProps> {
-    const company = await this.companyRepository.findById(id);
+  async execute(id: string): Promise<CompanyDetailsDto> {
+    const company = await this.companyRepository.findDetailsById(id);
 
     if (!company) {
       throw new ResourceNotFoundError("Empresa não encontrada.");
     }
 
-    return company.toObject();
+    return toCompanyDetailsDto(company);
   }
 }

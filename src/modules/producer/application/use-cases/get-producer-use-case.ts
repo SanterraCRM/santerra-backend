@@ -2,11 +2,11 @@ import { inject, injectable } from "tsyringe";
 
 import { TenantContext } from "../../../../shared/application/auth/auth-context";
 import { ResourceNotFoundError } from "../../../../shared/errors/app-error";
-import { ProducerProps } from "../../domain/entities/producer";
 import {
   PRODUCER_REPOSITORY,
   ProducerRepository,
 } from "../../domain/repositories/producer-repository";
+import { ProducerListItemDto } from "../dtos/producer-list-item-dto";
 
 @injectable()
 export class GetProducerUseCase {
@@ -15,13 +15,13 @@ export class GetProducerUseCase {
     private readonly producerRepository: ProducerRepository,
   ) {}
 
-  async execute(id: string, context: TenantContext): Promise<ProducerProps> {
-    const producer = await this.producerRepository.findById(id, context.companyId);
+  async execute(id: string, context: TenantContext): Promise<ProducerListItemDto> {
+    const item = await this.producerRepository.findListItemById(id, context.companyId);
 
-    if (!producer) {
+    if (!item) {
       throw new ResourceNotFoundError("Produtor não encontrado.");
     }
 
-    return producer.toObject();
+    return { ...item.producer.toObject(), person: item.person };
   }
 }

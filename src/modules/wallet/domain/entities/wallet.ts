@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import { DomainError } from "../../../../shared/domain/errors/domain-error";
 
-const MAX_VALUE = 999_999_999_999.99;
+export const WALLET_MAX_VALUE = 999_999_999_999.99;
 
 export interface WalletProps {
   id: string;
@@ -25,7 +25,6 @@ interface CreateWalletProps {
 }
 
 export interface UpdateWalletProps {
-  value?: number;
   userCompanyId?: string;
   updatedById?: string | null;
 }
@@ -63,11 +62,19 @@ export class Wallet {
     return this.props.userCompanyId;
   }
 
-  update(input: UpdateWalletProps, updatedAt = new Date()): void {
-    if (input.value !== undefined) {
-      this.props.value = Wallet.normalizeValue(input.value);
+  static ensureCreditAmount(amount: number): number {
+    if (typeof amount !== "number" || !Number.isFinite(amount) || amount <= 0) {
+      throw new DomainError("Informe um crédito maior que zero.");
     }
 
+    if (amount > WALLET_MAX_VALUE) {
+      throw new DomainError("O crédito excede o máximo permitido.");
+    }
+
+    return amount;
+  }
+
+  update(input: UpdateWalletProps, updatedAt = new Date()): void {
     if (input.userCompanyId !== undefined) {
       this.props.userCompanyId = Wallet.normalizeUserCompanyId(input.userCompanyId);
     }
@@ -94,7 +101,7 @@ export class Wallet {
       throw new DomainError("O valor da carteira não pode ser negativo.");
     }
 
-    if (value > MAX_VALUE) {
+    if (value > WALLET_MAX_VALUE) {
       throw new DomainError("O valor da carteira excede o máximo permitido.");
     }
 

@@ -1,7 +1,10 @@
 import { inject, injectable } from "tsyringe";
 
 import { AuthContext } from "../../../../shared/application/auth/auth-context";
-import { ResourceNotFoundError } from "../../../../shared/errors/app-error";
+import {
+  ConflictError,
+  ResourceNotFoundError,
+} from "../../../../shared/errors/app-error";
 import { PublicManufacturerProps } from "../../domain/entities/manufacturer";
 import {
   MANUFACTURER_REPOSITORY,
@@ -28,6 +31,15 @@ export class UpdateManufacturerUseCase {
     }
 
     manufacturer.update({ ...input, updatedById: context.userId });
+
+    if (input.name !== undefined) {
+      const owner = await this.manufacturerRepository.findByName(manufacturer.name);
+
+      if (owner && owner.id !== manufacturer.id) {
+        throw new ConflictError("Já existe um fabricante com este nome.");
+      }
+    }
+
     const updatedManufacturer = await this.manufacturerRepository.update(manufacturer);
 
     return updatedManufacturer.toPublicObject();

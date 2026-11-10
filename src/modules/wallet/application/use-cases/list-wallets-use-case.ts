@@ -2,12 +2,12 @@ import { inject, injectable } from "tsyringe";
 
 import { TenantContext } from "../../../../shared/application/auth/auth-context";
 import { PaginatedDto } from "../../../../shared/dtos/paginated-dto";
-import { WalletProps } from "../../domain/entities/wallet";
 import {
   WALLET_REPOSITORY,
   WalletRepository,
 } from "../../domain/repositories/wallet-repository";
 import { ListWalletsDto } from "../dtos/list-wallets-dto";
+import { toWalletListItemDto, WalletListItemDto } from "../dtos/wallet-details-dto";
 
 const DEFAULT_PAGE = 1;
 const DEFAULT_LIMIT = 20;
@@ -22,7 +22,7 @@ export class ListWalletsUseCase {
   async execute(
     input: ListWalletsDto,
     context: TenantContext,
-  ): Promise<PaginatedDto<WalletProps>> {
+  ): Promise<PaginatedDto<WalletListItemDto>> {
     const page = input.page ?? DEFAULT_PAGE;
     const limit = input.limit ?? DEFAULT_LIMIT;
 
@@ -33,11 +33,12 @@ export class ListWalletsUseCase {
       limit,
       search,
       userCompanyId: input.userCompanyId,
+      balance: input.balance,
       includeDeleted: input.includeDeleted ?? false,
     });
 
     return {
-      data: result.wallets.map((wallet) => wallet.toObject()),
+      data: result.wallets.map(toWalletListItemDto),
       meta: {
         page,
         limit,

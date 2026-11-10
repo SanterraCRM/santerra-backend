@@ -6,18 +6,29 @@ import {
   ResellerRepository,
   FindResellersParams,
   FindResellersResult,
+  ResellerDetails,
+  ResellerOptionalField,
 } from "../../domain/repositories/reseller-repository";
-import { PrismaResellerMapper } from "./prisma-reseller-mapper";
+import { PrismaResellerMapper, resellerDetailsInclude } from "./prisma-reseller-mapper";
+
+const MISSING_FIELD_FILTERS: Record<ResellerOptionalField, Prisma.ResellerWhereInput> = {
+  registrationNumber: { OR: [{ registrationNumber: null }, { registrationNumber: "" }] },
+  phoneNumber: { OR: [{ phoneNumber: null }, { phoneNumber: "" }] },
+  email: { OR: [{ email: null }, { email: "" }] },
+};
 
 @injectable()
 export class PrismaResellerRepository implements ResellerRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
-  async create(reseller: Reseller): Promise<Reseller> {
+  async create(reseller: Reseller): Promise<ResellerDetails> {
     const data = reseller.toObject();
-    const createdReseller = await this.prisma.reseller.create({ data });
+    const createdReseller = await this.prisma.reseller.create({
+      data,
+      include: resellerDetailsInclude,
+    });
 
-    return PrismaResellerMapper.toDomain(createdReseller);
+    return PrismaResellerMapper.toDetails(createdReseller);
   }
 
   async findById(
@@ -34,6 +45,19 @@ export class PrismaResellerRepository implements ResellerRepository {
     });
 
     return reseller ? PrismaResellerMapper.toDomain(reseller) : null;
+  }
+
+  async findDetailsById(id: string, companyId: string): Promise<ResellerDetails | null> {
+    const reseller = await this.prisma.reseller.findFirst({
+      where: {
+        id,
+        companyId,
+        deletedAt: null,
+      },
+      include: resellerDetailsInclude,
+    });
+
+    return reseller ? PrismaResellerMapper.toDetails(reseller) : null;
   }
 
   async findByRegistrationNumber(
@@ -67,17 +91,20 @@ export class PrismaResellerRepository implements ResellerRepository {
     const where: Prisma.ResellerWhereInput = {
       companyId: params.companyId,
       deletedAt: params.includeDeleted ? undefined : null,
+      createdAt: { gte: params.createdFrom, lte: params.createdTo },
       OR: params.search
         ? [
             { name: { contains: params.search, mode: "insensitive" } },
             { registrationNumber: { contains: params.search, mode: "insensitive" } },
           ]
         : undefined,
+      AND: params.missing?.map((field) => MISSING_FIELD_FILTERS[field]),
     };
 
     const [resellers, total] = await this.prisma.$transaction([
       this.prisma.reseller.findMany({
         where,
+        include: resellerDetailsInclude,
         orderBy: { createdAt: "desc" },
         skip: (params.page - 1) * params.limit,
         take: params.limit,
@@ -86,12 +113,12 @@ export class PrismaResellerRepository implements ResellerRepository {
     ]);
 
     return {
-      resellers: resellers.map(PrismaResellerMapper.toDomain),
+      resellers: resellers.map(PrismaResellerMapper.toDetails),
       total,
     };
   }
 
-  async update(reseller: Reseller): Promise<Reseller> {
+  async update(reseller: Reseller): Promise<ResellerDetails> {
     const data = reseller.toObject();
     const updatedReseller = await this.prisma.reseller.update({
       where: {
@@ -107,9 +134,10 @@ export class PrismaResellerRepository implements ResellerRepository {
         updatedAt: data.updatedAt,
         updatedById: data.updatedById,
       },
+      include: resellerDetailsInclude,
     });
 
-    return PrismaResellerMapper.toDomain(updatedReseller);
+    return PrismaResellerMapper.toDetails(updatedReseller);
   }
 
   async delete(reseller: Reseller): Promise<void> {

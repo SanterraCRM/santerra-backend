@@ -6,14 +6,19 @@ import {
   ProductRepository,
   FindProductsParams,
   FindProductsResult,
+  ProductDetails,
 } from "../../domain/repositories/product-repository";
-import { PrismaProductMapper, productInclude } from "./prisma-product-mapper";
+import {
+  PrismaProductMapper,
+  productDetailsInclude,
+  productInclude,
+} from "./prisma-product-mapper";
 
 @injectable()
 export class PrismaProductRepository implements ProductRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
-  async create(product: Product): Promise<Product> {
+  async create(product: Product): Promise<ProductDetails> {
     const { groupIds, fileIds, ...data } = product.toObject();
     const [, , , createdProduct] = await this.prisma.$transaction([
       this.prisma.product.create({ data }),
@@ -33,11 +38,11 @@ export class PrismaProductRepository implements ProductRepository {
       }),
       this.prisma.product.findUniqueOrThrow({
         where: { id: data.id },
-        include: productInclude,
+        include: productDetailsInclude,
       }),
     ]);
 
-    return PrismaProductMapper.toDomain(createdProduct);
+    return PrismaProductMapper.toDetails(createdProduct);
   }
 
   async findById(
@@ -57,6 +62,15 @@ export class PrismaProductRepository implements ProductRepository {
     return product ? PrismaProductMapper.toDomain(product) : null;
   }
 
+  async findDetailsById(id: string, companyId: string): Promise<ProductDetails | null> {
+    const product = await this.prisma.product.findFirst({
+      where: { id, companyId, deletedAt: null },
+      include: productDetailsInclude,
+    });
+
+    return product ? PrismaProductMapper.toDetails(product) : null;
+  }
+
   async findManyByIds(ids: string[], companyId: string): Promise<Product[]> {
     const products = await this.prisma.product.findMany({
       where: {
@@ -74,6 +88,12 @@ export class PrismaProductRepository implements ProductRepository {
     const where: Prisma.ProductWhereInput = {
       companyId: params.companyId,
       deletedAt: params.includeDeleted ? undefined : null,
+      manufacturerId: params.manufacturerId,
+      groups: params.groupId
+        ? { some: { groupId: params.groupId, group: { deletedAt: null } } }
+        : undefined,
+      price: { gte: params.priceMin, lte: params.priceMax },
+      createdAt: { gte: params.createdFrom, lte: params.createdTo },
       OR: params.search
         ? [
             { name: { contains: params.search, mode: "insensitive" } },
@@ -85,7 +105,7 @@ export class PrismaProductRepository implements ProductRepository {
     const [products, total] = await this.prisma.$transaction([
       this.prisma.product.findMany({
         where,
-        include: productInclude,
+        include: productDetailsInclude,
         orderBy: { createdAt: "desc" },
         skip: (params.page - 1) * params.limit,
         take: params.limit,
@@ -94,12 +114,12 @@ export class PrismaProductRepository implements ProductRepository {
     ]);
 
     return {
-      products: products.map(PrismaProductMapper.toDomain),
+      products: products.map(PrismaProductMapper.toDetails),
       total,
     };
   }
 
-  async update(product: Product): Promise<Product> {
+  async update(product: Product): Promise<ProductDetails> {
     const { groupIds, fileIds, ...data } = product.toObject();
     const [, , , , updatedProduct] = await this.prisma.$transaction([
       this.prisma.productGroup.deleteMany({
@@ -143,11 +163,11 @@ export class PrismaProductRepository implements ProductRepository {
           updatedAt: data.updatedAt,
           updatedById: data.updatedById,
         },
-        include: productInclude,
+        include: productDetailsInclude,
       }),
     ]);
 
-    return PrismaProductMapper.toDomain(updatedProduct);
+    return PrismaProductMapper.toDetails(updatedProduct);
   }
 
   async delete(product: Product): Promise<void> {

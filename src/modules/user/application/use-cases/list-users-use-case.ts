@@ -27,6 +27,7 @@ export class ListUsersUseCase {
       page,
       limit,
       search,
+      active: input.active,
       includeDeleted: input.includeDeleted ?? false,
     });
 

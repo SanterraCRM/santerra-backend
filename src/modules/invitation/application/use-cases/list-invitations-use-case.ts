@@ -32,6 +32,7 @@ export class ListInvitationsUseCase {
       page,
       limit,
       search,
+      status: input.status,
       includeDeleted: input.includeDeleted ?? false,
     });
 

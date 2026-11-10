@@ -65,7 +65,7 @@ export class CommercialActionReferences {
       await this.ensureAll(
         commercialAction.resellerGuestIds,
         (ids) => this.resellerRepository.findManyByIds(ids, companyId),
-        "Revendedor convidado não encontrado.",
+        "Revenda convidada não encontrada.",
       );
     }
 

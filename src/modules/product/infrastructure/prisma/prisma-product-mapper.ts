@@ -1,6 +1,7 @@
 import { Prisma } from "@prisma/client";
 
 import { Product } from "../../domain/entities/product";
+import { ProductDetails } from "../../domain/repositories/product-repository";
 
 export const productInclude = {
   groups: {
@@ -13,7 +14,24 @@ export const productInclude = {
   },
 } satisfies Prisma.ProductInclude;
 
+export const productDetailsInclude = {
+  ...productInclude,
+  groups: {
+    where: { group: { deletedAt: null } },
+    select: { groupId: true, group: { select: { id: true, name: true } } },
+  },
+  files: {
+    where: { file: { deletedAt: null } },
+    select: {
+      fileId: true,
+      file: { select: { id: true, originalName: true, mimeType: true, size: true } },
+    },
+  },
+  manufacturer: { select: { id: true, name: true } },
+} satisfies Prisma.ProductInclude;
+
 type PrismaProduct = Prisma.ProductGetPayload<{ include: typeof productInclude }>;
+type PrismaProductDetails = Prisma.ProductGetPayload<{ include: typeof productDetailsInclude }>;
 
 export class PrismaProductMapper {
   static toDomain(raw: PrismaProduct): Product {
@@ -34,5 +52,14 @@ export class PrismaProductMapper {
       updatedById: raw.updatedById,
       deletedById: raw.deletedById,
     });
+  }
+
+  static toDetails({ manufacturer, ...raw }: PrismaProductDetails): ProductDetails {
+    return {
+      product: PrismaProductMapper.toDomain(raw),
+      manufacturer,
+      groups: raw.groups.map(({ group }) => group),
+      files: raw.files.map(({ file }) => file),
+    };
   }
 }

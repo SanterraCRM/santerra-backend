@@ -6,11 +6,13 @@ import {
   CommercialTripProps,
 } from "../../domain/entities/commercialTrip";
 import {
+  CommercialTripDetails,
   CommercialTripRepository,
   FindCommercialTripsParams,
   FindCommercialTripsResult,
 } from "../../domain/repositories/commercialTrip-repository";
 import {
+  commercialTripDetailsInclude,
   commercialTripInclude,
   PrismaCommercialTripMapper,
 } from "./prisma-commercialTrip-mapper";
@@ -19,7 +21,7 @@ import {
 export class PrismaCommercialTripRepository implements CommercialTripRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
-  async create(commercialTrip: CommercialTrip): Promise<CommercialTrip> {
+  async create(commercialTrip: CommercialTrip): Promise<CommercialTripDetails> {
     const props = commercialTrip.toObject();
     const {
       participantIds: _participantIds,
@@ -34,11 +36,11 @@ export class PrismaCommercialTripRepository implements CommercialTripRepository 
 
       return transaction.commercialTrip.findUniqueOrThrow({
         where: { id: data.id },
-        include: commercialTripInclude,
+        include: commercialTripDetailsInclude,
       });
     });
 
-    return PrismaCommercialTripMapper.toDomain(createdCommercialTrip);
+    return PrismaCommercialTripMapper.toDetails(createdCommercialTrip);
   }
 
   async findById(
@@ -58,23 +60,28 @@ export class PrismaCommercialTripRepository implements CommercialTripRepository 
     return commercialTrip ? PrismaCommercialTripMapper.toDomain(commercialTrip) : null;
   }
 
+  async findDetailsById(id: string, companyId: string): Promise<CommercialTripDetails | null> {
+    const commercialTrip = await this.prisma.commercialTrip.findFirst({
+      where: { id, companyId, deletedAt: null },
+      include: commercialTripDetailsInclude,
+    });
+
+    return commercialTrip ? PrismaCommercialTripMapper.toDetails(commercialTrip) : null;
+  }
+
   async findMany(params: FindCommercialTripsParams): Promise<FindCommercialTripsResult> {
     const where: Prisma.CommercialTripWhereInput = {
       companyId: params.companyId,
       deletedAt: params.includeDeleted ? undefined : null,
+      status: params.status,
+      producerId: params.producerId,
+      responsibleId: params.responsibleId,
+      expectedDate: { gte: params.expectedFrom, lte: params.expectedTo },
+      tripDate: { gte: params.tripFrom, lte: params.tripTo },
       OR: params.search
         ? [
-            {
-              producer: {
-                is: {
-                  person: {
-                    is: {
-                      name: { contains: params.search, mode: "insensitive" },
-                    },
-                  },
-                },
-              },
-            },
+            { producer: { person: { name: { contains: params.search, mode: "insensitive" } } } },
+            { responsible: { person: { name: { contains: params.search, mode: "insensitive" } } } },
           ]
         : undefined,
     };
@@ -82,8 +89,8 @@ export class PrismaCommercialTripRepository implements CommercialTripRepository 
     const [commercialTrips, total] = await this.prisma.$transaction([
       this.prisma.commercialTrip.findMany({
         where,
-        include: commercialTripInclude,
-        orderBy: { createdAt: "desc" },
+        include: commercialTripDetailsInclude,
+        orderBy: [{ expectedDate: { sort: "desc", nulls: "last" } }, { createdAt: "desc" }],
         skip: (params.page - 1) * params.limit,
         take: params.limit,
       }),
@@ -91,12 +98,12 @@ export class PrismaCommercialTripRepository implements CommercialTripRepository 
     ]);
 
     return {
-      commercialTrips: commercialTrips.map(PrismaCommercialTripMapper.toDomain),
+      commercialTrips: commercialTrips.map(PrismaCommercialTripMapper.toDetails),
       total,
     };
   }
 
-  async update(commercialTrip: CommercialTrip): Promise<CommercialTrip> {
+  async update(commercialTrip: CommercialTrip): Promise<CommercialTripDetails> {
     const props = commercialTrip.toObject();
     const updatedCommercialTrip = await this.prisma.$transaction(async (transaction) => {
       await this.replaceLinks(transaction, props);
@@ -119,11 +126,11 @@ export class PrismaCommercialTripRepository implements CommercialTripRepository 
           updatedAt: props.updatedAt,
           updatedById: props.updatedById,
         },
-        include: commercialTripInclude,
+        include: commercialTripDetailsInclude,
       });
     });
 
-    return PrismaCommercialTripMapper.toDomain(updatedCommercialTrip);
+    return PrismaCommercialTripMapper.toDetails(updatedCommercialTrip);
   }
 
   async delete(commercialTrip: CommercialTrip): Promise<void> {

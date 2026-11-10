@@ -11,6 +11,7 @@ export function invitationRouter(): Router {
   const router = Router();
   const controller = container.resolve(InvitationController);
 
+  router.get("/preview", controller.preview);
   router.post("/accept", controller.accept);
 
   router.post(

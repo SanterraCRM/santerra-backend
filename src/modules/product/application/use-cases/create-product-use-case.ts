@@ -5,12 +5,13 @@ import { ResourceNotFoundError } from "../../../../shared/errors/app-error";
 import { FILE_REPOSITORY, FileRepository } from "../../../file";
 import { GROUP_REPOSITORY, GroupRepository } from "../../../group";
 import { MANUFACTURER_REPOSITORY, ManufacturerRepository } from "../../../manufacturer";
-import { Product, ProductProps } from "../../domain/entities/product";
+import { Product } from "../../domain/entities/product";
 import {
   PRODUCT_REPOSITORY,
   ProductRepository,
 } from "../../domain/repositories/product-repository";
 import { CreateProductDto } from "../dtos/create-product-dto";
+import { ProductDetailsDto, toProductDetailsDto } from "../dtos/product-details-dto";
 
 @injectable()
 export class CreateProductUseCase {
@@ -28,7 +29,7 @@ export class CreateProductUseCase {
   async execute(
     input: CreateProductDto,
     context: TenantContext,
-  ): Promise<ProductProps> {
+  ): Promise<ProductDetailsDto> {
     const product = Product.create({
       ...input,
       companyId: context.companyId,
@@ -56,6 +57,6 @@ export class CreateProductUseCase {
 
     const createdProduct = await this.productRepository.create(product);
 
-    return createdProduct.toObject();
+    return toProductDetailsDto(createdProduct, context);
   }
 }

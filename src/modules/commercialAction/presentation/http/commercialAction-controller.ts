@@ -2,13 +2,17 @@ import { RequestHandler } from "express";
 import { injectable } from "tsyringe";
 
 import { getTenantContext } from "../../../../shared/http/request-context";
-import { idParamSchema, listQuerySchema } from "../../../../shared/http/request-schemas";
+import { idParamSchema } from "../../../../shared/http/request-schemas";
 import { CreateCommercialActionUseCase } from "../../application/use-cases/create-commercialAction-use-case";
 import { DeleteCommercialActionUseCase } from "../../application/use-cases/delete-commercialAction-use-case";
 import { GetCommercialActionUseCase } from "../../application/use-cases/get-commercialAction-use-case";
 import { ListCommercialActionsUseCase } from "../../application/use-cases/list-commercialActions-use-case";
 import { UpdateCommercialActionUseCase } from "../../application/use-cases/update-commercialAction-use-case";
-import { createCommercialActionSchema, updateCommercialActionSchema } from "./commercialAction-schemas";
+import {
+  createCommercialActionSchema,
+  listCommercialActionsQuerySchema,
+  updateCommercialActionSchema,
+} from "./commercialAction-schemas";
 
 @injectable()
 export class CommercialActionController {
@@ -31,7 +35,7 @@ export class CommercialActionController {
 
   list: RequestHandler = async (request, response) => {
     const result = await this.listCommercialActionsUseCase.execute(
-      listQuerySchema.parse(request.query),
+      listCommercialActionsQuerySchema.parse(request.query),
       getTenantContext(request),
     );
 

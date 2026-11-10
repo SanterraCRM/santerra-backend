@@ -17,6 +17,7 @@ export function walletRouter(): Router {
   router.get("/", ensurePermission(PERMISSIONS.WALLETS_READ), controller.list);
   router.get("/:id", ensurePermission(PERMISSIONS.WALLETS_READ), controller.getById);
   router.patch("/:id", ensurePermission(PERMISSIONS.WALLETS_UPDATE), controller.update);
+  router.post("/:id/credits", ensurePermission(PERMISSIONS.WALLETS_UPDATE), controller.credit);
   router.delete("/:id", ensurePermission(PERMISSIONS.WALLETS_DELETE), controller.delete);
 
   return router;

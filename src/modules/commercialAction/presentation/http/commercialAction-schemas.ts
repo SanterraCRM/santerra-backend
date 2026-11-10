@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { dateTimeQuerySchema, listQuerySchema } from "../../../../shared/http/request-schemas";
+
 export const createCommercialActionSchema = z.object({
   description: z.string().nullish(),
   eventId: z.uuid(),
@@ -20,3 +22,11 @@ export const updateCommercialActionSchema = createCommercialActionSchema
   .refine((data) => Object.keys(data).length > 0, {
     message: "Informe ao menos um campo para atualizar.",
   });
+
+export const listCommercialActionsQuerySchema = listQuerySchema.extend({
+  eventId: z.uuid().optional(),
+  responsibleId: z.uuid().optional(),
+  walletId: z.uuid().optional(),
+  initialFrom: dateTimeQuerySchema.optional(),
+  initialTo: dateTimeQuerySchema.optional(),
+});

@@ -1,7 +1,10 @@
 import { inject, injectable } from "tsyringe";
 
 import { AuthContext } from "../../../../shared/application/auth/auth-context";
-import { ResourceNotFoundError } from "../../../../shared/errors/app-error";
+import {
+  ResourceInUseError,
+  ResourceNotFoundError,
+} from "../../../../shared/errors/app-error";
 import {
   MANUFACTURER_REPOSITORY,
   ManufacturerRepository,
@@ -19,6 +22,14 @@ export class DeleteManufacturerUseCase {
 
     if (!manufacturer) {
       throw new ResourceNotFoundError("Fabricante não encontrado.");
+    }
+
+    const productsCount = await this.manufacturerRepository.countProducts(manufacturer.id);
+
+    if (productsCount > 0) {
+      const products = productsCount === 1 ? "1 produto" : `${productsCount} produtos`;
+
+      throw new ResourceInUseError(`Este fabricante está em uso por ${products}.`);
     }
 
     manufacturer.delete(context.userId);

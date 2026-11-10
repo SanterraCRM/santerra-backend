@@ -2,13 +2,17 @@ import { RequestHandler } from "express";
 import { injectable } from "tsyringe";
 
 import { getAuthContext } from "../../../../shared/http/request-context";
-import { idParamSchema, listQuerySchema } from "../../../../shared/http/request-schemas";
+import { idParamSchema } from "../../../../shared/http/request-schemas";
 import { CreateHarvestUseCase } from "../../application/use-cases/create-harvest-use-case";
 import { DeleteHarvestUseCase } from "../../application/use-cases/delete-harvest-use-case";
 import { GetHarvestUseCase } from "../../application/use-cases/get-harvest-use-case";
 import { ListHarvestsUseCase } from "../../application/use-cases/list-harvests-use-case";
 import { UpdateHarvestUseCase } from "../../application/use-cases/update-harvest-use-case";
-import { createHarvestSchema, updateHarvestSchema } from "./harvest-schemas";
+import {
+  createHarvestSchema,
+  listHarvestsQuerySchema,
+  updateHarvestSchema,
+} from "./harvest-schemas";
 
 @injectable()
 export class HarvestController {
@@ -31,7 +35,7 @@ export class HarvestController {
 
   list: RequestHandler = async (request, response) => {
     const result = await this.listHarvestsUseCase.execute(
-      listQuerySchema.parse(request.query),
+      listHarvestsQuerySchema.parse(request.query),
     );
 
     response.status(200).json(result);

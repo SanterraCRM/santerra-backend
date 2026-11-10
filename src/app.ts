@@ -5,6 +5,7 @@ import { z } from "zod";
 import "./shared/container";
 import { authRouter } from "./modules/auth";
 import { companyRouter } from "./modules/company";
+import { dashboardRouter } from "./modules/dashboard";
 import { eventRouter } from "./modules/event";
 import { fileRouter } from "./modules/file";
 import { invitationRouter } from "./modules/invitation";
@@ -59,6 +60,7 @@ app.use("/events", eventRouter());
 app.use("/commercial-trips", commercialTripRouter());
 app.use("/commercial-actions", commercialActionRouter());
 app.use("/groups", groupRouter());
+app.use("/dashboard", dashboardRouter());
 
 app.use((_request, response) => {
   response.status(404).json({

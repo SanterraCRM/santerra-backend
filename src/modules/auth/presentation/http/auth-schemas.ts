@@ -2,6 +2,11 @@ import { z } from "zod";
 
 import { passwordSchema } from "../../../../shared/http/request-schemas";
 
+export const createCompanySchema = z.object({
+  name: z.string(),
+  description: z.string().nullish(),
+});
+
 export const signUpSchema = z.object({
   name: z.string(),
   email: z.email(),

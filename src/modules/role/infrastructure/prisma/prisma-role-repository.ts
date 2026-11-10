@@ -9,6 +9,8 @@ import {
 } from "../../domain/repositories/role-repository";
 import { PrismaRoleMapper, roleInclude } from "./prisma-role-mapper";
 
+const ASSIGNED_MEMBERS: Prisma.UserRoleWhereInput = { userCompany: { deletedAt: null } };
+
 @injectable()
 export class PrismaRoleRepository implements RoleRepository {
   constructor(private readonly prisma: PrismaClient) {}
@@ -77,6 +79,7 @@ export class PrismaRoleRepository implements RoleRepository {
     const where: Prisma.RoleWhereInput = {
       companyId: params.companyId,
       deletedAt: params.includeDeleted ? undefined : null,
+      createdAt: { gte: params.createdFrom, lte: params.createdTo },
       OR: params.search
         ? [
             { name: { contains: params.search, mode: "insensitive" } },
@@ -88,7 +91,10 @@ export class PrismaRoleRepository implements RoleRepository {
     const [roles, total] = await this.prisma.$transaction([
       this.prisma.role.findMany({
         where,
-        include: roleInclude,
+        include: {
+          ...roleInclude,
+          _count: { select: { userRoles: { where: ASSIGNED_MEMBERS } } },
+        },
         orderBy: { createdAt: "desc" },
         skip: (params.page - 1) * params.limit,
         take: params.limit,
@@ -97,9 +103,18 @@ export class PrismaRoleRepository implements RoleRepository {
     ]);
 
     return {
-      roles: roles.map(PrismaRoleMapper.toDomain),
+      roles: roles.map((role) => ({
+        role: PrismaRoleMapper.toDomain(role),
+        membersCount: role._count.userRoles,
+      })),
       total,
     };
+  }
+
+  async countMembers(id: string, companyId: string): Promise<number> {
+    return this.prisma.userRole.count({
+      where: { ...ASSIGNED_MEMBERS, roleId: id, companyId },
+    });
   }
 
   async update(role: Role): Promise<Role> {

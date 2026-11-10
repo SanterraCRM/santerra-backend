@@ -2,13 +2,17 @@ import { RequestHandler } from "express";
 import { injectable } from "tsyringe";
 
 import { getTenantContext } from "../../../../shared/http/request-context";
-import { idParamSchema, listQuerySchema } from "../../../../shared/http/request-schemas";
+import { idParamSchema } from "../../../../shared/http/request-schemas";
 import { CreateCommercialTripUseCase } from "../../application/use-cases/create-commercialTrip-use-case";
 import { DeleteCommercialTripUseCase } from "../../application/use-cases/delete-commercialTrip-use-case";
 import { GetCommercialTripUseCase } from "../../application/use-cases/get-commercialTrip-use-case";
 import { ListCommercialTripsUseCase } from "../../application/use-cases/list-commercialTrips-use-case";
 import { UpdateCommercialTripUseCase } from "../../application/use-cases/update-commercialTrip-use-case";
-import { createCommercialTripSchema, updateCommercialTripSchema } from "./commercialTrip-schemas";
+import {
+  createCommercialTripSchema,
+  listCommercialTripsQuerySchema,
+  updateCommercialTripSchema,
+} from "./commercialTrip-schemas";
 
 @injectable()
 export class CommercialTripController {
@@ -31,7 +35,7 @@ export class CommercialTripController {
 
   list: RequestHandler = async (request, response) => {
     const result = await this.listCommercialTripsUseCase.execute(
-      listQuerySchema.parse(request.query),
+      listCommercialTripsQuerySchema.parse(request.query),
       getTenantContext(request),
     );
 
