@@ -195,6 +195,14 @@ Remover um membro (`DELETE /members/:id`) desvincula o funcionário ligado a ele
 * `GET /companies` e `GET /companies/:id` (plataforma) trazem `owner` (`{ id, name, email }` ou `null`) e `membersCount` (membros não removidos).
 * `GET /users` (plataforma) aceita `active` (`true`/`false`). O backend não impede o admin de desativar a própria conta; a tela impede.
 
+### Logo da empresa
+
+* `PUT /companies/current/logo` (com `company.update`) recebe a imagem no campo `file` de um `multipart/form-data`: PNG, JPG ou WEBP, conferidos pelo conteúdo do arquivo (não pelo tipo informado), até 2 MB. Acima disso, 413; outro formato ou arquivo vazio, 400. Responde com a empresa. A logo nova substitui a anterior, que sai do armazenamento.
+* `DELETE /companies/current/logo` (com `company.update`) remove a logo e responde 204, também quando não havia logo.
+* `GET /companies/:id/logo` é **público**, sem token: `<img>` não manda o `Bearer`, e a escolha de empresa mostra empresas para as quais o token ainda não vale. Serve só a logo daquela empresa, com o `Content-Type` da imagem, `Content-Disposition: inline` e `X-Content-Type-Options: nosniff`. Com `?v=` igual ao `logo` atual, a resposta pode ficar um ano no cache (`immutable`); sem ele, ou com outro valor, `no-cache`. Empresa sem logo ou excluída dá 404.
+* O `logo` das respostas (empresa e `companies` do login e do `/auth/me`) é a chave da imagem no armazenamento (`<empresa>/logo-<uuid>.png`), ou `null`. A tela usa esse valor para saber se há logo e como versão da URL: `GET /companies/:id/logo?v=<logo>`.
+* O `PATCH /companies/current` e o `PATCH /companies/:id` não aceitam mais `logo`. Antes gravavam qualquer texto, o que, com a rota pública, deixaria apontar a logo para um arquivo de outra empresa.
+
 ### Convites
 
 * O e-mail do convite leva para `INVITATION_ACCEPT_URL` (padrão `http://localhost:3000/auth/accept-invitation`) com `?token=`. O token só existe no e-mail: a API guarda o hash.
@@ -239,7 +247,7 @@ Para lançar, use `ConflictError` na duplicidade e `ResourceInUseError` na exclu
 * `GET /files` lista (com `page`, `limit` e `search` pelo nome), `GET /files/:id` devolve os dados, `PATCH /files/:id` renomeia (`originalName`) e `DELETE /files/:id` exclui (soft delete: o conteúdo continua no armazenamento).
 * `GET /files/:id/download` devolve o conteúdo. Como exige o header `Authorization`, o front-end baixa com `fetch` e usa o `blob` da resposta (não funciona direto em `<img src>` ou `<a href>`).
 
-O conteúdo fica em disco, na pasta `STORAGE_DIR` (padrão `uploads/`, fora do Git), separado por empresa. O campo `url` do registro é a chave do arquivo nessa pasta, não um link público. Para trocar por um serviço como S3, basta outra implementação de `StorageProvider` (`src/shared/application/storage/`) registrada em `src/shared/container.ts`.
+O conteúdo fica em disco, na pasta `STORAGE_DIR` (padrão `uploads/`, fora do Git), separado por empresa. A logo da empresa fica na mesma pasta (`<empresa>/logo-<uuid>.png`), sem registro em `/files`. O campo `url` do registro é a chave do arquivo nessa pasta, não um link público. Para trocar por um serviço como S3, basta outra implementação de `StorageProvider` (`src/shared/application/storage/`) registrada em `src/shared/container.ts`.
 
 ## Executando
 
