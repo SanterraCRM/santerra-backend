@@ -89,6 +89,7 @@ Um usuário é uma conta global e pode participar de várias empresas, com cargo
 4. As rotas da empresa (`/persons`, `/products`, `/wallets`, `/files`, `/roles`, `/members`, `/invitations`, `/companies/current`) usam o token com empresa no header `Authorization: Bearer <token>`, e cada ação exige a permissão correspondente nos cargos do usuário.
 5. Novos funcionários entram por convite: `POST /invitations` envia o link por e-mail e `POST /invitations/accept` aceita. Se o e-mail ainda não tiver conta, ela é criada com `name` e `password`; se já tiver, é preciso informar a senha dela.
 6. Recuperação de senha: `POST /auth/forgot-password` com `email` envia um link válido por 60 minutos (`PASSWORD_RESET_URL?token=...`) e sempre responde `204`, exista a conta ou não, para não revelar quais e-mails estão cadastrados. `POST /auth/reset-password` com `token` e `password` troca a senha e invalida os outros links pendentes do usuário.
+7. Minha conta: com qualquer token, com ou sem empresa, `PATCH /auth/me` com `name` muda o nome do próprio usuário e devolve o usuário, e `PATCH /auth/me/password` com `currentPassword` e `newPassword` troca a senha (`204`) e invalida os links de recuperação pendentes, como o `reset-password`. Senha atual errada dá `400` com o código `INVALID_CURRENT_PASSWORD`, e a nova igual à atual dá `400`. O e-mail não muda por essas rotas (só pela plataforma, em `PATCH /users/:id`). Trocar a senha não encerra as outras sessões: o token já emitido vale até expirar (`JWT_EXPIRES_IN`, padrão 1 dia).
 
 Ninguém cria, edita, exclui, atribui ou convida com um cargo que tenha permissões que a própria pessoa não tem.
 
@@ -219,6 +220,7 @@ Todo erro responde `{ "error": { "code", "message", "details"? } }`. A `message`
 | 400 | `INVALID_REFERENCE` | Um dos IDs informados não existe |
 | 400 | `EMAIL_NOT_VERIFIED` | Cadastro com `verificationToken` inválido ou expirado |
 | 400 | `INSUFFICIENT_BALANCE` | A carteira não tem saldo para o valor da ação comercial ("Saldo insuficiente na carteira."): a tela mostra no campo Valor |
+| 400 | `INVALID_CURRENT_PASSWORD` | Troca de senha em Minha conta com a senha atual errada ("A senha atual está incorreta."): a tela mostra no campo Senha atual |
 | 401 | `UNAUTHORIZED` | Credenciais erradas, token ausente, inválido ou expirado, usuário inativo ou acesso à empresa removido |
 | 403 | `FORBIDDEN` | Sem permissão para a ação |
 | 404 | `RESOURCE_NOT_FOUND` | Registro inexistente (ou de outra empresa) |
