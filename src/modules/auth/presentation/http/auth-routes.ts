@@ -16,6 +16,8 @@ export function authRouter(): Router {
   router.post("/reset-password", controller.resetPassword);
   router.post("/select-company", ensureAuthenticated, controller.selectCompany);
   router.get("/me", ensureAuthenticated, controller.me);
+  router.patch("/me", ensureAuthenticated, controller.updateProfile);
+  router.patch("/me/password", ensureAuthenticated, controller.changePassword);
   router.post("/companies", ensureAuthenticated, controller.createCompany);
 
   return router;

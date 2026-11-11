@@ -12,4 +12,5 @@ export interface PasswordResetRepository {
   create(passwordReset: PasswordReset): Promise<PasswordReset>;
   findByTokenHash(tokenHash: string): Promise<PasswordReset | null>;
   resetPassword(params: ResetPasswordParams): Promise<void>;
+  changePassword(user: User): Promise<void>;
 }

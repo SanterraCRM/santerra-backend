@@ -2,6 +2,7 @@ import { RequestHandler } from "express";
 import { injectable } from "tsyringe";
 
 import { getAuthContext } from "../../../../shared/http/request-context";
+import { ChangePasswordUseCase } from "../../application/use-cases/change-password-use-case";
 import { CreateCompanyUseCase } from "../../application/use-cases/create-company-use-case";
 import { ForgotPasswordUseCase } from "../../application/use-cases/forgot-password-use-case";
 import { GetSessionUseCase } from "../../application/use-cases/get-session-use-case";
@@ -10,8 +11,10 @@ import { ResetPasswordUseCase } from "../../application/use-cases/reset-password
 import { SelectCompanyUseCase } from "../../application/use-cases/select-company-use-case";
 import { SendEmailVerificationUseCase } from "../../application/use-cases/send-email-verification-use-case";
 import { SignUpUseCase } from "../../application/use-cases/sign-up-use-case";
+import { UpdateProfileUseCase } from "../../application/use-cases/update-profile-use-case";
 import { VerifyEmailUseCase } from "../../application/use-cases/verify-email-use-case";
 import {
+  changePasswordSchema,
   createCompanySchema,
   forgotPasswordSchema,
   loginSchema,
@@ -19,6 +22,7 @@ import {
   selectCompanySchema,
   sendEmailVerificationSchema,
   signUpSchema,
+  updateProfileSchema,
   verifyEmailSchema,
 } from "./auth-schemas";
 
@@ -34,6 +38,8 @@ export class AuthController {
     private readonly forgotPasswordUseCase: ForgotPasswordUseCase,
     private readonly resetPasswordUseCase: ResetPasswordUseCase,
     private readonly createCompanyUseCase: CreateCompanyUseCase,
+    private readonly updateProfileUseCase: UpdateProfileUseCase,
+    private readonly changePasswordUseCase: ChangePasswordUseCase,
   ) {}
 
   sendEmailVerification: RequestHandler = async (request, response) => {
@@ -100,6 +106,24 @@ export class AuthController {
     );
 
     response.status(200).json(session);
+  };
+
+  updateProfile: RequestHandler = async (request, response) => {
+    const user = await this.updateProfileUseCase.execute(
+      updateProfileSchema.parse(request.body),
+      getAuthContext(request),
+    );
+
+    response.status(200).json(user);
+  };
+
+  changePassword: RequestHandler = async (request, response) => {
+    await this.changePasswordUseCase.execute(
+      changePasswordSchema.parse(request.body),
+      getAuthContext(request),
+    );
+
+    response.status(204).send();
   };
 
   createCompany: RequestHandler = async (request, response) => {

@@ -1,6 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 import { injectable } from "tsyringe";
 
+import { User } from "../../../user";
 import { PasswordReset } from "../../domain/entities/password-reset";
 import {
   PasswordResetRepository,
@@ -49,6 +50,33 @@ export class PrismaPasswordResetRepository implements PasswordResetRepository {
         },
         data: {
           usedAt: passwordResetData.usedAt,
+        },
+      }),
+      this.prisma.user.update({
+        where: {
+          id: userData.id,
+          deletedAt: null,
+        },
+        data: {
+          passwordHash: userData.passwordHash,
+          updatedAt: userData.updatedAt,
+          updatedById: userData.updatedById,
+        },
+      }),
+    ]);
+  }
+
+  async changePassword(user: User): Promise<void> {
+    const userData = user.toObject();
+
+    await this.prisma.$transaction([
+      this.prisma.passwordReset.updateMany({
+        where: {
+          userId: userData.id,
+          usedAt: null,
+        },
+        data: {
+          usedAt: userData.updatedAt,
         },
       }),
       this.prisma.user.update({
