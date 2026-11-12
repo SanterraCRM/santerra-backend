@@ -13,6 +13,9 @@ build/
 # Prisma
 prisma/generated/
 
+# Arquivos enviados pelo módulo de arquivos (STORAGE_DIR)
+uploads/
+
 # Logs
 *.log
 npm-debug.log*

@@ -1,0 +1,27 @@
+-- Permissões dos módulos de potenciais, revendedores, funcionários, grupos, visitas e ações comerciais (src/shared/application/auth/permissions.ts).
+INSERT INTO "Permission" ("id", "name", "description") VALUES
+  ('43c41e22-685a-4b1c-9d70-75cb2adaf4db', 'potentials.read', 'Visualizar potenciais.'),
+  ('2d5bacbf-5466-415f-ac69-a883fdf16a8c', 'potentials.create', 'Cadastrar potenciais.'),
+  ('c1f76c23-9373-4d27-9fb6-a8dc61b6c481', 'potentials.update', 'Editar potenciais.'),
+  ('7e1080d2-6230-4552-9f9b-6138141faf85', 'potentials.delete', 'Excluir potenciais.'),
+  ('a9c2fdd2-b145-4fe4-862c-b214007ac074', 'resellers.read', 'Visualizar revendedores.'),
+  ('f50901fc-f8b6-486e-acff-23fe3d4679aa', 'resellers.create', 'Cadastrar revendedores.'),
+  ('448736be-344e-4b9a-9719-3d5a3d670580', 'resellers.update', 'Editar revendedores.'),
+  ('57b4d1f1-b7ca-4b78-8297-e78ba869efe1', 'resellers.delete', 'Excluir revendedores.'),
+  ('c2d723ba-c8d8-4345-b81e-d32bd3d8330b', 'employees.read', 'Visualizar funcionários.'),
+  ('e265476a-5bdb-492f-a698-f9a4faf5a465', 'employees.create', 'Cadastrar funcionários.'),
+  ('0805cc53-9214-4660-afcc-69044412d397', 'employees.update', 'Editar funcionários.'),
+  ('6ee744ab-792a-41e8-8070-23b53c8eb2f4', 'employees.delete', 'Excluir funcionários.'),
+  ('7292eeac-e8e8-4626-bae7-95148674e444', 'groups.read', 'Visualizar grupos de produtos.'),
+  ('67bcc885-07d3-44e7-98dc-9101395c0fec', 'groups.create', 'Cadastrar grupos de produtos.'),
+  ('71c64aa4-7c01-48fa-93d7-d224643a5ab4', 'groups.update', 'Editar grupos de produtos.'),
+  ('07cb176c-747d-490b-8472-c4a53aeaef2a', 'groups.delete', 'Excluir grupos de produtos.'),
+  ('71a774a3-02de-4597-be11-d6766a264694', 'commercial-trips.read', 'Visualizar visitas comerciais.'),
+  ('8c119fd7-1a8d-4c3f-a939-3614d1aae91f', 'commercial-trips.create', 'Cadastrar visitas comerciais.'),
+  ('613286e7-7513-4552-97b2-8c3d2ad5d668', 'commercial-trips.update', 'Editar visitas comerciais.'),
+  ('eb207811-aac4-4be8-9a45-545df7ed52a4', 'commercial-trips.delete', 'Excluir visitas comerciais.'),
+  ('babfab11-a3b2-48f3-9bd5-bbbc523f59b8', 'commercial-actions.read', 'Visualizar ações comerciais.'),
+  ('4a6c5442-cbb0-4113-9e11-7dba7a5c07b5', 'commercial-actions.create', 'Cadastrar ações comerciais e debitar a carteira.'),
+  ('5f41fe95-bc25-48e7-8c37-9514ee3257a8', 'commercial-actions.update', 'Editar ações comerciais.'),
+  ('a2f56d83-70e6-4eac-b460-cdb4204511cc', 'commercial-actions.delete', 'Excluir ações comerciais e estornar a carteira.')
+ON CONFLICT ("name") DO NOTHING;

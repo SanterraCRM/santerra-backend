@@ -1,13 +1,16 @@
 import { Prisma, PrismaClient } from "@prisma/client";
+import { injectable } from "tsyringe";
 
 import { Company } from "../../domain/entities/company";
 import {
+  CompanyDetails,
   CompanyRepository,
   FindCompaniesParams,
   FindCompaniesResult,
 } from "../../domain/repositories/company-repository";
-import { PrismaCompanyMapper } from "./prisma-company-mapper";
+import { companyDetailsInclude, PrismaCompanyMapper } from "./prisma-company-mapper";
 
+@injectable()
 export class PrismaCompanyRepository implements CompanyRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
@@ -29,6 +32,15 @@ export class PrismaCompanyRepository implements CompanyRepository {
     return company ? PrismaCompanyMapper.toDomain(company) : null;
   }
 
+  async findDetailsById(id: string): Promise<CompanyDetails | null> {
+    const company = await this.prisma.company.findFirst({
+      where: { id, deletedAt: null },
+      include: companyDetailsInclude,
+    });
+
+    return company ? PrismaCompanyMapper.toDetails(company) : null;
+  }
+
   async findMany(params: FindCompaniesParams): Promise<FindCompaniesResult> {
     const where: Prisma.CompanyWhereInput = {
       deletedAt: params.includeDeleted ? undefined : null,
@@ -43,6 +55,7 @@ export class PrismaCompanyRepository implements CompanyRepository {
     const [companies, total] = await this.prisma.$transaction([
       this.prisma.company.findMany({
         where,
+        include: companyDetailsInclude,
         orderBy: { createdAt: "desc" },
         skip: (params.page - 1) * params.limit,
         take: params.limit,
@@ -51,12 +64,12 @@ export class PrismaCompanyRepository implements CompanyRepository {
     ]);
 
     return {
-      companies: companies.map(PrismaCompanyMapper.toDomain),
+      companies: companies.map(PrismaCompanyMapper.toDetails),
       total,
     };
   }
 
-  async save(company: Company): Promise<Company> {
+  async update(company: Company): Promise<Company> {
     const data = company.toObject();
     const updatedCompany = await this.prisma.company.update({
       where: {
@@ -68,12 +81,25 @@ export class PrismaCompanyRepository implements CompanyRepository {
         description: data.description,
         logo: data.logo,
         updatedAt: data.updatedAt,
-        deletedAt: data.deletedAt,
         updatedById: data.updatedById,
-        deletedById: data.deletedById,
       },
     });
 
     return PrismaCompanyMapper.toDomain(updatedCompany);
+  }
+
+  async delete(company: Company): Promise<void> {
+    const data = company.toObject();
+
+    await this.prisma.company.update({
+      where: {
+        id: data.id,
+        deletedAt: null,
+      },
+      data: {
+        deletedAt: data.deletedAt,
+        deletedById: data.deletedById,
+      },
+    });
   }
 }

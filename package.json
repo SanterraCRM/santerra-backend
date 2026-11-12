@@ -6,23 +6,44 @@
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
-    "prisma:generate": "prisma generate"
+    "validate": "prisma validate && yarn lint && yarn typecheck",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "typecheck": "tsc --noEmit",
+    "prisma:generate": "prisma generate",
+    "prisma:reset": "prisma migrate reset --force",
+    "prisma:seed": "prisma db seed",
+    "seed:main": "tsx prisma/seeds/main/index.ts",
+    "test:seed:main": "tsx --test prisma/seeds/main/tests/main-seed.test.ts"
   },
   "repository": "https://github.com/GabrielTramon/santerra-backend.git",
   "license": "MIT",
   "dependencies": {
     "@prisma/client": "6",
+    "argon2": "^0.45.1",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
-    "express": "^5.2.1"
+    "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^2.4.0",
+    "reflect-metadata": "^0.2.2",
+    "tsyringe": "^4.10.0",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
+    "@eslint/js": "^10",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/multer": "^2.3.0",
     "@types/node": "^26.5.0",
+    "eslint": "^10",
+    "globals": "^17.13.0",
     "prisma": "6",
     "ts-node": "^10.9.2",
     "ts-node-dev": "^2.0.0",
-    "typescript": "6.0.3"
+    "tsx": "^4.23.15",
+    "typescript": "6.0.3",
+    "typescript-eslint": "^8.71.0"
   }
 }

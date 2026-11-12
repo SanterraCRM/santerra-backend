@@ -1,7 +1,8 @@
 import "dotenv/config";
+import "reflect-metadata";
 
 import { app } from "./app";
-import { prisma } from "./shared/infra/database/prisma-client";
+import { prisma } from "./shared/infrastructure/database/prisma-client";
 
 const port = Number(process.env.PORT ?? 7777);
 

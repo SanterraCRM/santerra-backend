@@ -1,0 +1,77 @@
+import {
+  ALL_PERMISSIONS,
+  PERMISSIONS,
+  PermissionName,
+} from "../../../src/shared/application/auth/permissions";
+
+export interface RoleDefinition {
+  name: string;
+  description: string;
+  permissions: PermissionName[];
+}
+
+export const ADMINISTRATOR_ROLE = "Administrador";
+
+export const ROLES: RoleDefinition[] = [
+  {
+    name: ADMINISTRATOR_ROLE,
+    description: "Acesso a todas as funcionalidades da empresa.",
+    permissions: ALL_PERMISSIONS,
+  },
+  {
+    name: "Vendedor",
+    description:
+      "Cadastra pessoas, produtores, potenciais e revendas, e registra eventos, visitas e ações comerciais.",
+    permissions: [
+      PERMISSIONS.PERSONS_READ,
+      PERMISSIONS.PERSONS_CREATE,
+      PERMISSIONS.PERSONS_UPDATE,
+      PERMISSIONS.PRODUCERS_READ,
+      PERMISSIONS.PRODUCERS_CREATE,
+      PERMISSIONS.PRODUCERS_UPDATE,
+      PERMISSIONS.POTENTIALS_READ,
+      PERMISSIONS.POTENTIALS_CREATE,
+      PERMISSIONS.POTENTIALS_UPDATE,
+      PERMISSIONS.RESELLERS_READ,
+      PERMISSIONS.RESELLERS_CREATE,
+      PERMISSIONS.RESELLERS_UPDATE,
+      PERMISSIONS.PRODUCTS_READ,
+      PERMISSIONS.EVENTS_READ,
+      PERMISSIONS.EVENTS_CREATE,
+      PERMISSIONS.EVENTS_UPDATE,
+      PERMISSIONS.COMMERCIAL_ACTIONS_READ,
+      PERMISSIONS.COMMERCIAL_ACTIONS_CREATE,
+      PERMISSIONS.COMMERCIAL_ACTIONS_UPDATE,
+      PERMISSIONS.COMMERCIAL_TRIPS_READ,
+      PERMISSIONS.COMMERCIAL_TRIPS_CREATE,
+      PERMISSIONS.COMMERCIAL_TRIPS_UPDATE,
+      PERMISSIONS.GROUPS_READ,
+      PERMISSIONS.FILES_READ,
+      PERMISSIONS.FILES_CREATE,
+    ],
+  },
+  {
+    name: "Financeiro",
+    description: "Gerencia as carteiras e os arquivos e consulta os demais cadastros.",
+    permissions: [
+      PERMISSIONS.PERSONS_READ,
+      PERMISSIONS.PRODUCERS_READ,
+      PERMISSIONS.RESELLERS_READ,
+      PERMISSIONS.POTENTIALS_READ,
+      PERMISSIONS.PRODUCTS_READ,
+      PERMISSIONS.EMPLOYEES_READ,
+      PERMISSIONS.MEMBERS_READ,
+      PERMISSIONS.EVENTS_READ,
+      PERMISSIONS.COMMERCIAL_ACTIONS_READ,
+      PERMISSIONS.COMMERCIAL_TRIPS_READ,
+      PERMISSIONS.GROUPS_READ,
+      PERMISSIONS.WALLETS_READ,
+      PERMISSIONS.WALLETS_CREATE,
+      PERMISSIONS.WALLETS_UPDATE,
+      PERMISSIONS.WALLETS_DELETE,
+      PERMISSIONS.FILES_READ,
+      PERMISSIONS.FILES_CREATE,
+      PERMISSIONS.FILES_UPDATE,
+    ],
+  },
+];

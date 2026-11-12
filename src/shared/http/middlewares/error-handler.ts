@@ -1,10 +1,21 @@
 import { Prisma } from "@prisma/client";
 import { ErrorRequestHandler } from "express";
+import { ZodError } from "zod";
 
 import { DomainError } from "../../domain/errors/domain-error";
 import { AppError } from "../../errors/app-error";
 
-export const errorHandler: ErrorRequestHandler = (error, _request, response, _next) => {
+export const errorHandler: ErrorRequestHandler = (
+  error,
+  _request,
+  response,
+  next,
+) => {
+  if (response.headersSent) {
+    next(error);
+    return;
+  }
+
   if (error instanceof AppError) {
     response.status(error.statusCode).json({
       error: {
@@ -15,10 +26,24 @@ export const errorHandler: ErrorRequestHandler = (error, _request, response, _ne
     return;
   }
 
-  if (error instanceof DomainError) {
+  if (error instanceof ZodError) {
     response.status(400).json({
       error: {
         code: "VALIDATION_ERROR",
+        message: "Os dados da requisição são inválidos.",
+        details: error.issues.map((issue) => ({
+          field: issue.path.join(".") || null,
+          message: issue.message,
+        })),
+      },
+    });
+    return;
+  }
+
+  if (error instanceof DomainError) {
+    response.status(400).json({
+      error: {
+        code: error.code ?? "VALIDATION_ERROR",
         message: error.message,
       },
     });
@@ -50,11 +75,21 @@ export const errorHandler: ErrorRequestHandler = (error, _request, response, _ne
       return;
     }
 
+    if (error.code === "P2002") {
+      response.status(409).json({
+        error: {
+          code: "CONFLICT",
+          message: "Já existe um registro com os dados informados.",
+        },
+      });
+      return;
+    }
+
     if (error.code === "P2025") {
       response.status(404).json({
         error: {
           code: "RESOURCE_NOT_FOUND",
-          message: "Empresa não encontrada.",
+          message: "Registro não encontrado.",
         },
       });
       return;
