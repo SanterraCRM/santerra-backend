@@ -77,7 +77,69 @@ Para popular o banco com os dados de seed:
 yarn prisma:seed
 ```
 
-Os seeds ficam em `prisma/seeds/`. Os de desenvolvimento (como o de empresas) só rodam da `develop` para baixo: são ignorados quando `APP_ENV` ou `NODE_ENV` for `main`/`production`, ou quando a branch git atual for a `main`.
+Os seeds ficam em `prisma/seeds/`. Os de desenvolvimento (como o de empresas) só rodam da `develop` para baixo: são ignorados quando `APP_ENV` ou `NODE_ENV` for `main`/`production`, ou quando a branch git atual for a `main`. A main tem uma seed própria, que o `prisma:seed` não chama: veja [Seed da main](#seed-da-main).
+
+## Seed da main
+
+A main não roda os seeds de desenvolvimento. O primeiro acesso vem de uma seed própria, em `prisma/seeds/main/`, que cria a empresa Santerra, o admin master e três cargos. O `prisma:seed` e o `prisma:reset` não chamam essa seed.
+
+```bash
+read -rs SEED_ADMIN_PASSWORD && export SEED_ADMIN_PASSWORD
+SEED_CONFIRM=main yarn seed:main --dry-run
+SEED_CONFIRM=main yarn seed:main
+```
+
+O `read -rs` lê a senha sem mostrá-la e sem deixá-la no histórico do shell. A seed usa o `DATABASE_URL` do ambiente (ou do `.env`) e roda com o `tsx`, que é dependência de desenvolvimento.
+
+| Variável | Uso |
+| --- | --- |
+| `SEED_ADMIN_PASSWORD` | Senha do admin, com pelo menos 12 caracteres. É exigida em toda execução, mas só é usada quando o admin ainda não existe. |
+| `SEED_CONFIRM` | Precisa ser `main`. Passe na linha de comando: no `.env`, a proteção deixa de valer. |
+
+O que ela cria (os IDs saem do `@default(uuid())`, sem os UUIDs fixos dos seeds de desenvolvimento):
+
+* A empresa "Santerra", sem descrição.
+* O usuário "Santerra Admin" (`admin@santerra.com`), ativo e admin da plataforma (`isPlatformAdmin`), com a senha em hash argon2. Ele entra na Santerra como membro com o cargo Administrador, e não como dono.
+* Os cargos Administrador, Vendedor e Financeiro na Santerra, com as permissões da tabela abaixo.
+
+Proteções:
+
+* Com `NODE_ENV` igual a `development` ou `test`, recusa rodar, a não ser com `--force`, que libera só isso.
+* Sem `SEED_CONFIRM=main`, com a senha ausente ou curta, ou com uma opção desconhecida (ex.: `--dryrun`), para antes de conectar no banco e lista tudo o que falta.
+* Tudo roda numa transação só: se algo falhar, nada é gravado. Duas execuções ao mesmo tempo esperam uma pela outra (advisory lock do Postgres), então nenhuma duplica a empresa nem falha por conflito.
+* Antes do commit, uma verificação confere que a empresa existe e não está excluída; que o admin existe, está ativo, é `isPlatformAdmin` e tem o cargo Administrador na Santerra; e que os três cargos existem com pelo menos uma permissão, o Administrador com todas as de `ALL_PERMISSIONS`. Se algo não bater, a seed aborta dizendo o quê.
+* O log mostra só o que foi criado, atualizado ou já existia. Senha e hash nunca aparecem, nem nas mensagens de erro.
+* `--dry-run` roda tudo, inclusive a verificação, numa transação desfeita no final: mostra o que seria criado ou alterado sem gravar nada.
+* Em qualquer recusa ou falha, sai com código 1.
+
+Rodar de novo não duplica nem sobrescreve o que foi editado:
+
+* A empresa é encontrada pelo nome (sem as excluídas), o admin pelo e-mail e os cargos pelo nome dentro da empresa. O que já existe não muda: nome e descrição da empresa, e nome, senha, status e `isPlatformAdmin` do admin. Se o admin existente estiver inativo, sem `isPlatformAdmin` ou fora da Santerra, a verificação falha: corrija pela plataforma ou no banco.
+* As permissões dos três cargos são sincronizadas a cada execução: entram as que faltam e saem as que não estão na definição, inclusive as mudadas pela tela. Nome e descrição dos cargos não mudam.
+* Como a chave é o nome, renomear a Santerra ou um desses cargos pela tela faz a próxima execução criar outro.
+* As permissões vêm das migrations, não da seed. Se faltar alguma no banco, a seed falha dizendo qual.
+
+Cargos e permissões, definidos em `prisma/seeds/main/roles.ts`. O Administrador tem todas (`ALL_PERMISSIONS`). Vendedor e Financeiro:
+
+| Recurso | Vendedor | Financeiro |
+| --- | --- | --- |
+| `persons` | read, create, update | read |
+| `producers` | read, create, update | read |
+| `potentials` | read, create, update | read |
+| `resellers` | read, create, update | read |
+| `products` | read | read |
+| `employees` | — | read |
+| `members` | — | read |
+| `events` | read, create, update | read |
+| `commercial-actions` | read, create, update | read |
+| `commercial-trips` | read, create, update | read |
+| `groups` | read | read |
+| `wallets` | — | read, create, update, delete |
+| `files` | read, create | read, create, update |
+
+`company`, `roles`, `invitations` e os `delete` que não aparecem na tabela ficam só com o Administrador.
+
+Para testar a seed: `yarn test:seed:main` cria um banco temporário no servidor do `DATABASE_URL` (o usuário do banco precisa poder criar bancos), aplica as migrations, roda a seed nos cenários (proteções, `--dry-run`, primeira e segunda execução, falha na verificação, permissão faltando) e apaga o banco no final. O banco do `DATABASE_URL` não é alterado.
 
 ## Autenticação e empresas (multi-tenant)
 
@@ -270,6 +332,7 @@ yarn validate    # todas as verificações: schema do Prisma, lint e tipos
 yarn lint        # ESLint
 yarn lint:fix    # ESLint corrigindo o que for automático
 yarn typecheck   # checagem de tipos do TypeScript
+yarn test:seed:main   # teste da seed da main, num banco temporário (veja Seed da main)
 ```
 
 ## Banco de dados
