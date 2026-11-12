@@ -12,7 +12,9 @@
     "typecheck": "tsc --noEmit",
     "prisma:generate": "prisma generate",
     "prisma:reset": "prisma migrate reset --force",
-    "prisma:seed": "prisma db seed"
+    "prisma:seed": "prisma db seed",
+    "seed:main": "tsx prisma/seeds/main/index.ts",
+    "test:seed:main": "tsx --test prisma/seeds/main/tests/main-seed.test.ts"
   },
   "repository": "https://github.com/GabrielTramon/santerra-backend.git",
   "license": "MIT",
