@@ -13,6 +13,13 @@ enum CommercialTripStatus {
   COMPLETED   @map("finalizado")
 }
 
+enum GoalMetric {
+  COMPLETED_TRIPS    @map("visitas_finalizadas")
+  VISITED_PRODUCERS  @map("produtores_visitados")
+  COMMERCIAL_ACTIONS @map("acoes_comerciais")
+  SALES              @map("vendas")
+}
+
 model Company {
   id          String    @id @default(uuid()) @db.Uuid
   name        String
@@ -39,6 +46,7 @@ model Company {
   files         File[]
   products      Product[]
   groups        Group[]
+  goals         Goal[]
 
   createdBy User? @relation("CompanyCreatedBy", fields: [createdById], references: [id])
   updatedBy User? @relation("CompanyUpdatedBy", fields: [updatedById], references: [id])
@@ -166,6 +174,10 @@ model User {
   createdFiles File[] @relation("FileCreatedBy")
   updatedFiles File[] @relation("FileUpdatedBy")
   deletedFiles File[] @relation("FileDeletedBy")
+
+  createdGoals Goal[] @relation("GoalCreatedBy")
+  updatedGoals Goal[] @relation("GoalUpdatedBy")
+  deletedGoals Goal[] @relation("GoalDeletedBy")
 
   createdBy User? @relation("UserCreatedBy", fields: [createdById], references: [id])
   updatedBy User? @relation("UserUpdatedBy", fields: [updatedById], references: [id])
@@ -369,6 +381,7 @@ model Employee {
   commercialTrips    CommercialTrip[]              @relation("CommercialTripResponsible")
   actionParticipants CommercialActionParticipant[]
   tripParticipants   CommercialTripParticipant[]
+  goals              Goal[]
 
   createdBy User? @relation("EmployeeCreatedBy", fields: [createdById], references: [id])
   updatedBy User? @relation("EmployeeUpdatedBy", fields: [updatedById], references: [id])
@@ -704,6 +717,35 @@ model Group {
 
   @@unique([id, companyId])
   @@index([companyId, deletedAt])
+}
+
+model Goal {
+  id            String     @id @default(uuid()) @db.Uuid
+  employeeId    String     @db.Uuid
+  metric        GoalMetric
+  targetValue   Decimal    @db.Decimal(14, 2)
+  achievedValue Decimal?   @db.Decimal(14, 2)
+  startDate     DateTime
+  endDate       DateTime
+  description   String?
+  companyId     String     @db.Uuid
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  deletedAt     DateTime?
+  createdById   String?    @db.Uuid
+  updatedById   String?    @db.Uuid
+  deletedById   String?    @db.Uuid
+
+  employee Employee @relation(fields: [employeeId, companyId], references: [id, companyId])
+  company  Company  @relation(fields: [companyId], references: [id])
+
+  createdBy User? @relation("GoalCreatedBy", fields: [createdById], references: [id])
+  updatedBy User? @relation("GoalUpdatedBy", fields: [updatedById], references: [id])
+  deletedBy User? @relation("GoalDeletedBy", fields: [deletedById], references: [id])
+
+  @@unique([id, companyId])
+  @@index([companyId, deletedAt])
+  @@index([employeeId])
 }
 
 model ProductGroup {

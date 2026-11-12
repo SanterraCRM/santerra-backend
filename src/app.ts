@@ -25,6 +25,7 @@ import { employeeRouter } from "./modules/employee";
 import { commercialTripRouter } from "./modules/commercialTrip";
 import { commercialActionRouter } from "./modules/commercialAction";
 import { groupRouter } from "./modules/group";
+import { goalRouter } from "./modules/goal";
 
 import { errorHandler } from "./shared/http/middlewares/error-handler";
 
@@ -60,6 +61,7 @@ app.use("/events", eventRouter());
 app.use("/commercial-trips", commercialTripRouter());
 app.use("/commercial-actions", commercialActionRouter());
 app.use("/groups", groupRouter());
+app.use("/goals", goalRouter());
 app.use("/dashboard", dashboardRouter());
 
 app.use((_request, response) => {

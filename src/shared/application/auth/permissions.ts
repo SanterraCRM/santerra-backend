@@ -73,6 +73,11 @@ export const PERMISSIONS = {
   COMMERCIAL_ACTIONS_CREATE: "commercial-actions.create",
   COMMERCIAL_ACTIONS_UPDATE: "commercial-actions.update",
   COMMERCIAL_ACTIONS_DELETE: "commercial-actions.delete",
+
+  GOALS_READ: "goals.read",
+  GOALS_CREATE: "goals.create",
+  GOALS_UPDATE: "goals.update",
+  GOALS_DELETE: "goals.delete",
 } as const;
 
 export type PermissionName = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
