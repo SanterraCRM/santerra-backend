@@ -86,7 +86,10 @@ export class PrismaWalletRepository implements WalletRepository {
       this.prisma.wallet.findMany({
         where,
         include: walletListInclude,
-        orderBy: { createdAt: "desc" },
+        orderBy:
+          params.sort === "name"
+            ? [{ userCompany: { user: { name: "asc" } } }, { id: "asc" }]
+            : { createdAt: "desc" },
         skip: (params.page - 1) * params.limit,
         take: params.limit,
       }),

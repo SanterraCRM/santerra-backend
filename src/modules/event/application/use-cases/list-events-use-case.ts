@@ -34,6 +34,7 @@ export class ListEventsUseCase {
       search,
       createdFrom: input.createdFrom,
       createdTo: input.createdTo,
+      sort: input.sort,
       includeDeleted: input.includeDeleted ?? false,
     });
 

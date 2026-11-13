@@ -1,3 +1,4 @@
+import { ListSort } from "../../../../shared/domain/list-sort";
 import { Wallet } from "../entities/wallet";
 
 export const WALLET_REPOSITORY = "WalletRepository";
@@ -13,6 +14,7 @@ export interface FindWalletsParams {
   search?: string;
   userCompanyId?: string;
   balance?: WalletBalance;
+  sort?: ListSort;
   includeDeleted: boolean;
 }
 

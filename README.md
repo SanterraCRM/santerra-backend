@@ -176,6 +176,8 @@ As rotas de lista aceitam `page`, `limit` (padrão 20, máximo 100), `search` e 
 
 O filtro "Data de cadastro" usa `createdFrom` e `createdTo` em ISO com fuso (ex.: `2026-11-05T00:00:00-03:00`): quem chama decide onde o dia começa, e data sem fuso é recusada com `400`. No schema da lista, entra com `...createdAtRangeQuerySchema.shape`; outros períodos usam o `dateTimeQuerySchema`. Os dois ficam em `src/shared/http/request-schemas.ts`.
 
+A ordem padrão é a do cadastro, do mais recente para o mais antigo. As listas que alimentam os selects com busca no servidor aceitam `sort=name`, para virem em ordem alfabética: `/events`, `/manufacturers` (pelo nome), `/members` e `/wallets` (pelo nome do membro). O desempate é pelo `id`, para a paginação não repetir nem pular registro quando dois nomes são iguais, e a ordem segue o collation do banco (`Portuguese_Brazil`: "Água" vem com o "A"). Outro valor de `sort` dá `400`. No schema da lista, entra com `...sortQuerySchema.shape`; o repositório troca o `orderBy` quando `params.sort === "name"`. A busca (`search`) usa `contains` com `mode: "insensitive"`: ignora maiúsculas, mas não acentos ("avila" não acha "Ávila").
+
 ### Nomes das relações
 
 A resposta traz o nome das relações que a tela mostra, para a lista não precisar de uma requisição por linha. O repositório usa `include` com `select` mínimo (ex.: `producer.person: { id, name }`) e devolve um tipo de resposta próprio com esses campos. Os `*Id` (`personId`, `groupIds`…) continuam na resposta, porque é o que o `PATCH` recebe.

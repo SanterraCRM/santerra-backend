@@ -1,6 +1,9 @@
 import { z } from "zod";
 
-import { listQuerySchema } from "../../../../shared/http/request-schemas";
+import {
+  listQuerySchema,
+  sortQuerySchema,
+} from "../../../../shared/http/request-schemas";
 import { WALLET_MAX_VALUE } from "../../domain/entities/wallet";
 import { WALLET_BALANCES } from "../../domain/repositories/wallet-repository";
 
@@ -23,4 +26,5 @@ export const creditWalletSchema = z.object({
 export const listWalletsQuerySchema = listQuerySchema.extend({
   userCompanyId: z.uuid().optional(),
   balance: z.enum(WALLET_BALANCES).optional(),
+  ...sortQuerySchema.shape,
 });

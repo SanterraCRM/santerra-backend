@@ -35,6 +35,7 @@ export class ListMembersUseCase {
       active: input.active,
       roleId: input.roleId,
       hasWallet: input.hasWallet,
+      sort: input.sort,
       includeDeleted: input.includeDeleted ?? false,
     });
 

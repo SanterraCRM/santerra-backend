@@ -1,3 +1,5 @@
+import { ListSort } from "../../../../shared/domain/list-sort";
+
 export interface ListMembersDto {
   page?: number;
   limit?: number;
@@ -5,5 +7,6 @@ export interface ListMembersDto {
   active?: boolean;
   roleId?: string;
   hasWallet?: boolean;
+  sort?: ListSort;
   includeDeleted?: boolean;
 }
