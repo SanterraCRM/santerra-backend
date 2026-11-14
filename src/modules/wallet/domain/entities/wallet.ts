@@ -62,18 +62,6 @@ export class Wallet {
     return this.props.userCompanyId;
   }
 
-  static ensureCreditAmount(amount: number): number {
-    if (typeof amount !== "number" || !Number.isFinite(amount) || amount <= 0) {
-      throw new DomainError("Informe um crédito maior que zero.");
-    }
-
-    if (amount > WALLET_MAX_VALUE) {
-      throw new DomainError("O crédito excede o máximo permitido.");
-    }
-
-    return amount;
-  }
-
   update(input: UpdateWalletProps, updatedAt = new Date()): void {
     if (input.userCompanyId !== undefined) {
       this.props.userCompanyId = Wallet.normalizeUserCompanyId(input.userCompanyId);

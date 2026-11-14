@@ -3,16 +3,17 @@ import { inject, injectable } from "tsyringe";
 import { TenantContext } from "../../../../shared/application/auth/auth-context";
 import { DomainError } from "../../../../shared/domain/errors/domain-error";
 import { ResourceNotFoundError } from "../../../../shared/errors/app-error";
-import { Wallet } from "../../domain/entities/wallet";
+import { WalletAdjustment } from "../../domain/entities/wallet-adjustment";
+import { InsufficientBalanceError } from "../../domain/errors/insufficient-balance-error";
 import {
   WALLET_REPOSITORY,
   WalletRepository,
 } from "../../domain/repositories/wallet-repository";
-import { CreditWalletDto } from "../dtos/credit-wallet-dto";
+import { AdjustWalletDto } from "../dtos/adjust-wallet-dto";
 import { toWalletDetailsDto, WalletDetailsDto } from "../dtos/wallet-details-dto";
 
 @injectable()
-export class CreditWalletUseCase {
+export class AdjustWalletUseCase {
   constructor(
     @inject(WALLET_REPOSITORY)
     private readonly walletRepository: WalletRepository,
@@ -20,17 +21,29 @@ export class CreditWalletUseCase {
 
   async execute(
     id: string,
-    input: CreditWalletDto,
+    input: AdjustWalletDto,
     context: TenantContext,
   ): Promise<WalletDetailsDto> {
-    const amount = Wallet.ensureCreditAmount(input.amount);
+    const adjustment = WalletAdjustment.create(input);
 
     if (!(await this.walletRepository.findById(id, context.companyId))) {
       throw new ResourceNotFoundError("Carteira não encontrada.");
     }
 
-    if (!(await this.walletRepository.credit(id, context.companyId, amount, context.userId))) {
-      throw new DomainError("Com este crédito, o saldo passaria do máximo permitido.");
+    const result = await this.walletRepository.adjust({
+      id,
+      companyId: context.companyId,
+      amount: adjustment.amount,
+      reason: adjustment.reason,
+      userId: context.userId,
+    });
+
+    if (result === "insufficient_balance") {
+      throw new InsufficientBalanceError();
+    }
+
+    if (result === "exceeds_maximum") {
+      throw new DomainError("Com este ajuste, o saldo passaria do máximo permitido.");
     }
 
     const wallet = await this.walletRepository.findDetailsById(id, context.companyId);

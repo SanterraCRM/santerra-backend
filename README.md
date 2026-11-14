@@ -235,7 +235,7 @@ Remover um membro (`DELETE /members/:id`) desvincula o funcionário ligado a ele
 
 * Todas as respostas trazem `event`, `responsible` e `wallet` (`{ id, name }`; na carteira, `name` é o nome do membro dono), `producerGuests`, `resellerGuests` e `participants` (`[{ id, name }]`, em ordem alfabética) e `files` (só com `files.read`; senão `null`), além dos ids (`CommercialActionDetailsDto`).
 * A lista aceita `eventId`, `responsibleId`, `walletId` (o extrato da carteira) e `initialFrom`/`initialTo` (início da ação, com fuso), e busca na descrição e no nome do evento. A ordem é pelo início, do mais recente para o mais antigo (sem data no fim), e depois pelo cadastro.
-* **Saldo:** criar a ação debita o valor da carteira; mudar o valor ou a carteira devolve o valor antigo e debita o novo, na mesma transação; excluir devolve o valor. Sem saldo, 400 `INSUFFICIENT_BALANCE` e nada muda.
+* **Saldo:** criar a ação debita o valor da carteira; mudar o valor ou a carteira devolve o valor antigo e debita o novo, na mesma transação; excluir devolve o valor. Sem saldo, 400 `INSUFFICIENT_BALANCE` e nada muda. Cada débito e cada estorno viram uma movimentação no extrato da carteira (ver "Carteiras").
 * Tirar anexo segue a D7, como no produto e na visita.
 * Eventos: o nome é único por empresa (D12, seguindo a recomendação): 409 `CONFLICT` ("Já existe um evento com este nome."), para dois eventos não ficarem iguais no select da ação.
 
@@ -243,10 +243,16 @@ Remover um membro (`DELETE /members/:id`) desvincula o funcionário ligado a ele
 
 * Todas as respostas de `/wallets` trazem `member: { id, name, email }` (`WalletDetailsDto`); a lista traz também `actionsCount` (as ações comerciais não excluídas da carteira), o mesmo número do 409 da exclusão.
 * **Uma carteira por membro** (D4, seguindo a recomendação): criar a segunda, ou trocar o membro para um que já tem carteira, dá 409 `CONFLICT` ("Este membro já tem uma carteira."). A regra fica na aplicação, sem índice único no banco, porque a carteira excluída (lógica) não pode impedir uma nova.
-* **O saldo (`value`) só muda por crédito e pelas ações.** `POST /wallets/:id/credits` (`{ amount }`, com `wallets.update`) soma o valor com incremento no banco, então créditos ao mesmo tempo somam todos; crédito zero ou negativo, ou que passaria do máximo da coluna, dá 400. As ações debitam e estornam do mesmo jeito. O `POST /wallets` aceita `value` como saldo inicial, e o `PATCH` não aceita mais `value` (antes gravava o saldo inteiro e podia apagar um débito feito no meio): só `userCompanyId`.
+* **Extrato (`WalletMovement`, D19).** Toda mudança de saldo grava uma movimentação na mesma transação:
+  * `INITIAL_BALANCE`: o saldo com que a carteira foi criada. A migration `20261112120000_add_wallet_movements` também grava o saldo de cada carteira que já existia, com o motivo "Saldo da carteira quando o extrato começou.";
+  * `ADJUSTMENT`: o ajuste manual, com motivo;
+  * `ACTION_DEBIT` e `ACTION_REFUND`: o débito e o estorno das ações comerciais, com o `commercialActionId`.
+
+  O `amount` vem com sinal (positivo entra, negativo sai), e o `balanceAfter` é o saldo logo depois. A soma das movimentações de uma carteira é sempre o `value`. A ordem é a do `sequence`, que desempata movimentações gravadas no mesmo instante (o estorno e o débito de uma mesma edição de ação). Só o `changeWalletBalance` (`modules/wallet/infrastructure/prisma/wallet-balance.ts`) escreve em `Wallet.value`: ele atualiza o saldo com a trava (sem ficar negativo nem passar do máximo, menos no estorno) e grava a movimentação. A criação da carteira grava o saldo inicial na mesma transação.
+* **Ajuste de saldo.** `POST /wallets/:id/adjustments` (`{ direction: "credit" | "debit", amount, reason }`, com `wallets.adjust`) acrescenta ou diminui o valor e devolve a carteira. O motivo é obrigatório (até 500 caracteres). Diminuir além do saldo dá 400 `INSUFFICIENT_BALANCE`; acrescentar além do máximo da coluna, ou valor zero ou negativo, dá 400. A migration deu `wallets.adjust` a todo cargo que tinha `wallets.update`, a permissão do antigo `POST /wallets/:id/credits` (removido). O `POST /wallets` continua aceitando `value` como saldo inicial, e o `PATCH` só aceita `userCompanyId`.
+* `GET /wallets/:id/movements` (com `wallets.read`) lista o extrato, do mais recente para o mais antigo, com `createdBy` (`{ id, name }`) e `commercialAction` (`{ id, description, deletedAt, event: { id, name } }`, também quando a ação já foi excluída, só com `commercial-actions.read`; senão `null`, e o `commercialActionId` continua). Filtros: `type`, `direction` (`credit` ou `debit`), `createdFrom`/`createdTo` e `search` (no motivo, na descrição da ação e no nome do evento). `GET /wallets/:id/movements/summary`, com os mesmos filtros, devolve `credits` e `debits` (as duas somas em positivo) e `count`.
 * A lista aceita `balance` (`empty`: zerada; `positive`: com saldo).
 * A exclusão é bloqueada enquanto houver ação comercial não excluída (409 `RESOURCE_IN_USE`, "Esta carteira está em uso por 2 ações comerciais.").
-* O extrato vem das ações comerciais (recomendação da D4): `GET /commercial-actions?walletId=`. Os créditos não ficam registrados um a um.
 * `GET /members` aceita `hasWallet` (`true`/`false`), para a tela oferecer só membros sem carteira. Remover um membro (`DELETE /members/:id`) é bloqueado quando a carteira dele tem ações (409 "A carteira deste membro está em uso por 1 ação comercial. Desative o membro em vez de removê-lo.") ou saldo (409 "A carteira deste membro ainda tem saldo. …"); a carteira zerada e sem ações é excluída junto com o membro. A regra fica no repositório de membros (`findWalletUsage`), sem importar o módulo de carteiras, que já importa o de membros.
 
 ### Empresas
@@ -291,7 +297,7 @@ Todo erro responde `{ "error": { "code", "message", "details"? } }`. A `message`
 | 400 | `INVALID_JSON` | Corpo com JSON malformado |
 | 400 | `INVALID_REFERENCE` | Um dos IDs informados não existe |
 | 400 | `EMAIL_NOT_VERIFIED` | Cadastro com `verificationToken` inválido ou expirado |
-| 400 | `INSUFFICIENT_BALANCE` | A carteira não tem saldo para o valor da ação comercial ("Saldo insuficiente na carteira."): a tela mostra no campo Valor |
+| 400 | `INSUFFICIENT_BALANCE` | A carteira não tem saldo para o valor da ação comercial ou do desconto num ajuste ("Saldo insuficiente na carteira."): a tela mostra no campo Valor |
 | 400 | `INVALID_CURRENT_PASSWORD` | Troca de senha em Minha conta com a senha atual errada ("A senha atual está incorreta."): a tela mostra no campo Senha atual |
 | 401 | `UNAUTHORIZED` | Credenciais erradas, token ausente, inválido ou expirado, usuário inativo ou acesso à empresa removido |
 | 403 | `FORBIDDEN` | Sem permissão para a ação |

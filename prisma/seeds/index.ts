@@ -15,6 +15,7 @@ import { seedPotentials } from "./potential-seed";
 import { seedProducers } from "./producers-seed";
 import { seedMembers } from "./members-seed";
 import { seedWallets } from "./wallets-seed";
+import { seedWalletMovements } from "./wallet-movements-seed";
 import { seedEmployees } from "./employee-seed";
 import { seedCommercialTrips } from "./commercialTrip-seed";
 import { seedCommercialAction } from "./commercialAction-seed";
@@ -49,6 +50,7 @@ async function main(): Promise<void> {
   await seedEvents(prisma);
   await seedCommercialTrips(prisma);
   await seedCommercialAction(prisma);
+  await seedWalletMovements(prisma);
   await seedGroups(prisma);
 }
 
