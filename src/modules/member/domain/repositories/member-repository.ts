@@ -1,3 +1,4 @@
+import { ListSort } from "../../../../shared/domain/list-sort";
 import { Member } from "../entities/member";
 
 export const MEMBER_REPOSITORY = "MemberRepository";
@@ -10,6 +11,7 @@ export interface FindMembersParams {
   active?: boolean;
   roleId?: string;
   hasWallet?: boolean;
+  sort?: ListSort;
   includeDeleted: boolean;
 }
 

@@ -36,7 +36,7 @@ export class CommercialActionReferences {
       changes.eventId !== undefined &&
       !(await this.eventRepository.findById(commercialAction.eventId, companyId))
     ) {
-      throw new ResourceNotFoundError("Evento não encontrado.");
+      throw new ResourceNotFoundError("Tipo de evento não encontrado.");
     }
 
     if (

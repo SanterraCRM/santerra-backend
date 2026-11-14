@@ -18,6 +18,7 @@ model Company {
   name        String
   description String?
   logo        String?
+  active      Boolean   @default(true)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   deletedAt   DateTime?
@@ -110,6 +111,7 @@ model User {
   createdWallets Wallet[] @relation("WalletCreatedBy")
   updatedWallets Wallet[] @relation("WalletUpdatedBy")
   deletedWallets Wallet[] @relation("WalletDeletedBy")
+  createdWalletMovements WalletMovement[] @relation("WalletMovementCreatedBy")
 
   createdRoles Role[] @relation("RoleCreatedBy")
   updatedRoles Role[] @relation("RoleUpdatedBy")
@@ -219,6 +221,7 @@ model Wallet {
   userCompany UserCompany @relation(fields: [userCompanyId, companyId], references: [id, companyId], onDelete: Restrict)
 
   commercialActions CommercialAction[]
+  movements         WalletMovement[]
 
   createdBy User? @relation("WalletCreatedBy", fields: [createdById], references: [id])
   updatedBy User? @relation("WalletUpdatedBy", fields: [updatedById], references: [id])
@@ -226,6 +229,35 @@ model Wallet {
 
   @@unique([id, companyId])
   @@index([userCompanyId, deletedAt])
+}
+
+enum WalletMovementType {
+  INITIAL_BALANCE @map("saldo_inicial")
+  ADJUSTMENT      @map("ajuste")
+  ACTION_DEBIT    @map("debito_acao")
+  ACTION_REFUND   @map("estorno_acao")
+}
+
+model WalletMovement {
+  id                 String             @id @default(uuid()) @db.Uuid
+  sequence           Int                @default(autoincrement())
+  walletId           String             @db.Uuid
+  companyId          String             @db.Uuid
+  type               WalletMovementType
+  amount             Decimal            @db.Decimal(14, 2)
+  balanceAfter       Decimal            @db.Decimal(14, 2)
+  reason             String?
+  commercialActionId String?            @db.Uuid
+  createdAt          DateTime           @default(now())
+  createdById        String?            @db.Uuid
+
+  wallet           Wallet            @relation(fields: [walletId, companyId], references: [id, companyId], onDelete: Restrict)
+  commercialAction CommercialAction? @relation(fields: [commercialActionId, companyId], references: [id, companyId], onDelete: Restrict)
+
+  createdBy User? @relation("WalletMovementCreatedBy", fields: [createdById], references: [id])
+
+  @@index([walletId, sequence])
+  @@index([commercialActionId])
 }
 
 model Role {
@@ -510,6 +542,8 @@ model CommercialAction {
   resellerGuests CommercialActionResellerGuest[]
   participants   CommercialActionParticipant[]
   files          FileCommercialAction[]
+
+  walletMovements WalletMovement[]
 
   createdBy User? @relation("CommercialActionCreatedBy", fields: [createdById], references: [id])
   updatedBy User? @relation("CommercialActionUpdatedBy", fields: [updatedById], references: [id])

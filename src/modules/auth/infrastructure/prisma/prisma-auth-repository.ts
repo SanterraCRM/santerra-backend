@@ -19,7 +19,7 @@ function activeMembershipWhere(userId: string): Prisma.UserCompanyWhereInput {
     userId,
     active: true,
     deletedAt: null,
-    company: { deletedAt: null },
+    company: { deletedAt: null, active: true },
   };
 }
 

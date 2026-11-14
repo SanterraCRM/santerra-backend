@@ -9,7 +9,7 @@ import {
 } from "../../domain/repositories/event-repository";
 import { CreateEventDto } from "../dtos/create-event-dto";
 
-export const EVENT_NAME_CONFLICT_MESSAGE = "Já existe um evento com este nome.";
+export const EVENT_NAME_CONFLICT_MESSAGE = "Já existe um tipo de evento com este nome.";
 
 @injectable()
 export class CreateEventUseCase {

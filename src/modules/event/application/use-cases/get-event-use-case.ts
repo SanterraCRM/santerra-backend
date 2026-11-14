@@ -19,7 +19,7 @@ export class GetEventUseCase {
     const event = await this.eventRepository.findById(id, context.companyId);
 
     if (!event) {
-      throw new ResourceNotFoundError("Evento não encontrado.");
+      throw new ResourceNotFoundError("Tipo de evento não encontrado.");
     }
 
     return event.toObject();

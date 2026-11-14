@@ -96,7 +96,8 @@ export class PrismaMemberRepository implements MemberRepository {
       this.prisma.userCompany.findMany({
         where,
         include: memberDetailsInclude,
-        orderBy: { createdAt: "desc" },
+        orderBy:
+          params.sort === "name" ? [{ user: { name: "asc" } }, { id: "asc" }] : { createdAt: "desc" },
         skip: (params.page - 1) * params.limit,
         take: params.limit,
       }),

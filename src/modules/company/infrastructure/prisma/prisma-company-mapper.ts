@@ -23,6 +23,7 @@ export class PrismaCompanyMapper {
       name: raw.name,
       description: raw.description,
       logo: raw.logo,
+      active: raw.active,
       createdAt: raw.createdAt,
       updatedAt: raw.updatedAt,
       deletedAt: raw.deletedAt,

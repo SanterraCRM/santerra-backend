@@ -1,7 +1,7 @@
 import { Prisma, PrismaClient } from "@prisma/client";
 import { injectable } from "tsyringe";
 
-import { InsufficientBalanceError } from "../../../wallet";
+import { changeWalletBalance, InsufficientBalanceError } from "../../../wallet";
 import {
   CommercialAction,
   CommercialActionProps,
@@ -33,8 +33,8 @@ export class PrismaCommercialActionRepository implements CommercialActionReposit
       ...data
     } = props;
     const createdCommercialAction = await this.prisma.$transaction(async (transaction) => {
-      await this.debit(transaction, commercialAction.charge, data.companyId);
       await transaction.commercialAction.create({ data });
+      await this.debit(transaction, commercialAction.charge, data.companyId, data.id, data.createdById);
       await this.replaceLinks(transaction, props);
 
       return transaction.commercialAction.findUniqueOrThrow({
@@ -116,8 +116,8 @@ export class PrismaCommercialActionRepository implements CommercialActionReposit
         charge.walletId !== previousCharge.walletId ||
         charge.amount !== previousCharge.amount
       ) {
-        await this.refund(transaction, previousCharge, props.companyId);
-        await this.debit(transaction, charge, props.companyId);
+        await this.refund(transaction, previousCharge, props.companyId, props.id, props.updatedById);
+        await this.debit(transaction, charge, props.companyId, props.id, props.updatedById);
       }
 
       await this.replaceLinks(transaction, props);
@@ -163,7 +163,13 @@ export class PrismaCommercialActionRepository implements CommercialActionReposit
         },
       });
 
-      await this.refund(transaction, commercialAction.charge, data.companyId);
+      await this.refund(
+        transaction,
+        commercialAction.charge,
+        data.companyId,
+        data.id,
+        data.deletedById,
+      );
     });
   }
 
@@ -196,22 +202,23 @@ export class PrismaCommercialActionRepository implements CommercialActionReposit
     transaction: Prisma.TransactionClient,
     charge: WalletCharge,
     companyId: string,
+    commercialActionId: string,
+    userId: string | null,
   ): Promise<void> {
     if (charge.amount === 0) {
       return;
     }
 
-    const { count } = await transaction.wallet.updateMany({
-      where: {
-        id: charge.walletId,
-        companyId,
-        deletedAt: null,
-        value: { gte: charge.amount },
-      },
-      data: { value: { decrement: charge.amount } },
+    const debited = await changeWalletBalance(transaction, {
+      walletId: charge.walletId,
+      companyId,
+      amount: -charge.amount,
+      type: "ACTION_DEBIT",
+      commercialActionId,
+      userId,
     });
 
-    if (count === 0) {
+    if (!debited) {
       throw new InsufficientBalanceError();
     }
   }
@@ -220,17 +227,21 @@ export class PrismaCommercialActionRepository implements CommercialActionReposit
     transaction: Prisma.TransactionClient,
     charge: WalletCharge,
     companyId: string,
+    commercialActionId: string,
+    userId: string | null,
   ): Promise<void> {
     if (charge.amount === 0) {
       return;
     }
 
-    await transaction.wallet.updateMany({
-      where: {
-        id: charge.walletId,
-        companyId,
-      },
-      data: { value: { increment: charge.amount } },
+    await changeWalletBalance(transaction, {
+      walletId: charge.walletId,
+      companyId,
+      amount: charge.amount,
+      type: "ACTION_REFUND",
+      commercialActionId,
+      userId,
+      enforceLimits: false,
     });
   }
 }

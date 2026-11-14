@@ -29,7 +29,7 @@ export class PreviewInvitationUseCase {
       ? await this.companyRepository.findById(invitation.companyId)
       : null;
 
-    if (!invitation || !company) {
+    if (!invitation || !company?.active) {
       throw new ResourceNotFoundError(
         "Convite não encontrado. Ele pode ter sido cancelado ou trocado por um mais novo.",
       );

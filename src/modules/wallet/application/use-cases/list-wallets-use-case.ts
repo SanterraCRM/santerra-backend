@@ -34,6 +34,7 @@ export class ListWalletsUseCase {
       search,
       userCompanyId: input.userCompanyId,
       balance: input.balance,
+      sort: input.sort,
       includeDeleted: input.includeDeleted ?? false,
     });
 
