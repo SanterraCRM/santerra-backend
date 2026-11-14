@@ -2,7 +2,10 @@ import { Router } from "express";
 import { container } from "tsyringe";
 
 import { ensureAuthenticated } from "../../../../shared/http/middlewares/ensure-authenticated";
+import { uploadSingleFile } from "../../../../shared/http/middlewares/upload-single-file";
+import { COMPANY_LOGO_FIELD_NAME, COMPANY_LOGO_MAX_SIZE } from "../../../company";
 import { AuthController } from "./auth-controller";
+import { CREATE_COMPANY_FORM_FIELDS } from "./auth-schemas";
 
 export function authRouter(): Router {
   const router = Router();
@@ -18,7 +21,14 @@ export function authRouter(): Router {
   router.get("/me", ensureAuthenticated, controller.me);
   router.patch("/me", ensureAuthenticated, controller.updateProfile);
   router.patch("/me/password", ensureAuthenticated, controller.changePassword);
-  router.post("/companies", ensureAuthenticated, controller.createCompany);
+  router.post(
+    "/companies",
+    ensureAuthenticated,
+    uploadSingleFile(COMPANY_LOGO_FIELD_NAME, COMPANY_LOGO_MAX_SIZE, {
+      maxFields: CREATE_COMPANY_FORM_FIELDS,
+    }),
+    controller.createCompany,
+  );
 
   return router;
 }

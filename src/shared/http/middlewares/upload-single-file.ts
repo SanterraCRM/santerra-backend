@@ -9,17 +9,25 @@ import {
 
 const BYTES_PER_MEGABYTE = 1024 * 1024;
 
-export function uploadSingleFile(fieldName: string, maxFileSize: number): RequestHandler {
+interface UploadSingleFileOptions {
+  maxFields?: number;
+}
+
+export function uploadSingleFile(
+  fieldName: string,
+  maxFileSize: number,
+  { maxFields = 0 }: UploadSingleFileOptions = {},
+): RequestHandler {
   const upload = multer({
     storage: multer.memoryStorage(),
-    limits: { fileSize: maxFileSize, files: 1, fields: 0 },
+    limits: { fileSize: maxFileSize, files: 1, fields: maxFields },
     defParamCharset: "utf8",
   }).single(fieldName);
 
   return (request, response, next) => {
     upload(request, response, (error: unknown) => {
       if (error instanceof MulterError) {
-        next(toAppError(error, fieldName, maxFileSize));
+        next(toAppError(error, fieldName, maxFileSize, maxFields));
         return;
       }
 
@@ -28,7 +36,12 @@ export function uploadSingleFile(fieldName: string, maxFileSize: number): Reques
   };
 }
 
-function toAppError(error: MulterError, fieldName: string, maxFileSize: number): AppError {
+function toAppError(
+  error: MulterError,
+  fieldName: string,
+  maxFileSize: number,
+  maxFields: number,
+): AppError {
   switch (error.code) {
     case "LIMIT_FILE_SIZE":
       return new PayloadTooLargeError(
@@ -38,7 +51,11 @@ function toAppError(error: MulterError, fieldName: string, maxFileSize: number):
     case "LIMIT_UNEXPECTED_FILE":
       return new ValidationError(`Envie um único arquivo no campo "${fieldName}".`);
     case "LIMIT_FIELD_COUNT":
-      return new ValidationError(`Envie somente o arquivo no campo "${fieldName}", sem outros campos.`);
+      return new ValidationError(
+        maxFields === 0
+          ? `Envie somente o arquivo no campo "${fieldName}", sem outros campos.`
+          : `Envie no máximo ${maxFields} campos além do arquivo.`,
+      );
     default:
       return new ValidationError("Não foi possível processar o arquivo enviado.");
   }

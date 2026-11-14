@@ -27,6 +27,7 @@ export class CreateCompanyUseCase {
       ownerEmail: input.ownerEmail,
       companyName: input.name,
       companyDescription: input.description,
+      companyLogo: input.logo,
       createdById: context.userId,
     });
     const company = await this.companyRepository.findDetailsById(companyId);

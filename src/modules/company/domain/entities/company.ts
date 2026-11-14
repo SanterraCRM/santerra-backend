@@ -7,6 +7,7 @@ export interface CompanyProps {
   name: string;
   description: string | null;
   logo: string | null;
+  active: boolean;
   createdAt: Date;
   updatedAt: Date;
   deletedAt: Date | null;
@@ -26,6 +27,7 @@ export interface UpdateCompanyProps {
   name?: string;
   description?: string | null;
   logo?: string | null;
+  active?: boolean;
   updatedById?: string | null;
 }
 
@@ -44,6 +46,7 @@ export class Company {
       name,
       description: input.description ?? null,
       logo: input.logo ?? null,
+      active: true,
       createdAt,
       updatedAt: createdAt,
       deletedAt: null,
@@ -65,6 +68,10 @@ export class Company {
     return this.props.logo;
   }
 
+  get active(): boolean {
+    return this.props.active;
+  }
+
   update(input: UpdateCompanyProps, updatedAt = new Date()): void {
     if (input.name !== undefined) {
       this.props.name = Company.normalizeName(input.name);
@@ -76,6 +83,10 @@ export class Company {
 
     if (input.logo !== undefined) {
       this.props.logo = input.logo;
+    }
+
+    if (input.active !== undefined) {
+      this.props.active = input.active;
     }
 
     this.props.updatedById = input.updatedById ?? null;

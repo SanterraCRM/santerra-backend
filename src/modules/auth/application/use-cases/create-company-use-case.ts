@@ -26,6 +26,7 @@ export class CreateCompanyUseCase {
       owner: user,
       companyName: input.name,
       companyDescription: input.description,
+      companyLogo: input.logo,
     });
 
     return company.toObject();

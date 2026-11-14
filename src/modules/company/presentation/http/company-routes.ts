@@ -9,7 +9,7 @@ import { ensureTenant } from "../../../../shared/http/middlewares/ensure-tenant"
 import { uploadSingleFile } from "../../../../shared/http/middlewares/upload-single-file";
 import { COMPANY_LOGO_MAX_SIZE } from "../../domain/company-logo";
 import { CompanyController } from "./company-controller";
-import { COMPANY_LOGO_FIELD_NAME } from "./company-schemas";
+import { COMPANY_LOGO_FIELD_NAME, CREATE_COMPANY_FORM_FIELDS } from "./company-schemas";
 
 export function companyRouter(): Router {
   const router = Router();
@@ -39,8 +39,16 @@ export function companyRouter(): Router {
     ensurePermission(PERMISSIONS.COMPANY_UPDATE),
     controller.removeCurrentLogo,
   );
+  router.post("/current/deactivate", ensureTenant, controller.deactivateCurrent);
 
-  router.post("/", ensurePlatformAdmin, controller.create);
+  router.post(
+    "/",
+    ensurePlatformAdmin,
+    uploadSingleFile(COMPANY_LOGO_FIELD_NAME, COMPANY_LOGO_MAX_SIZE, {
+      maxFields: CREATE_COMPANY_FORM_FIELDS,
+    }),
+    controller.create,
+  );
   router.get("/", ensurePlatformAdmin, controller.list);
   router.get("/:id", ensurePlatformAdmin, controller.getById);
   router.patch("/:id", ensurePlatformAdmin, controller.update);

@@ -6,6 +6,7 @@ export interface FindCompaniesParams {
   page: number;
   limit: number;
   search?: string;
+  active?: boolean;
   includeDeleted: boolean;
 }
 

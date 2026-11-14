@@ -146,8 +146,8 @@ Para testar a seed: `yarn test:seed:main` cria um banco temporário no servidor 
 Um usuário é uma conta global e pode participar de várias empresas, com cargos diferentes em cada uma.
 
 1. O cadastro confirma o e-mail antes de criar a conta. `POST /auth/sign-up/verification-code` com `email` envia um código de 6 dígitos válido por 15 minutos (`409` se o e-mail já tiver conta, `429` se pedir de novo em menos de 60 segundos). `POST /auth/sign-up/verify-email` com `email` e `code` devolve um `verificationToken`; são 5 tentativas por código, e vale só o código mais recente. Depois, `POST /auth/sign-up` com `name`, `email`, `password`, `companyName` e o `verificationToken` (válido por 60 minutos e de uso único; se expirar, a resposta é `400` com o código `EMAIL_NOT_VERIFIED`) cria a conta e a empresa, com quem cadastrou como **dono**, e já devolve o token com a empresa escolhida. O dono tem todas as permissões e não pode ser alterado nem removido. Também é criado um cargo "Administrador" para convidar outros administradores.
-2. `POST /auth/login` devolve um token sem empresa e a lista `companies`.
-3. `POST /auth/select-company` (com o token do login) devolve um token com a empresa escolhida. Também serve para trocar de empresa.
+2. `POST /auth/login` devolve um token sem empresa e a lista `companies`, só com as empresas ativas.
+3. `POST /auth/select-company` (com o token do login) devolve um token com a empresa escolhida. Também serve para trocar de empresa. Empresa inativa ou excluída dá 403.
 4. As rotas da empresa (`/persons`, `/products`, `/wallets`, `/files`, `/roles`, `/members`, `/invitations`, `/companies/current`) usam o token com empresa no header `Authorization: Bearer <token>`, e cada ação exige a permissão correspondente nos cargos do usuário.
 5. Novos funcionários entram por convite: `POST /invitations` envia o link por e-mail e `POST /invitations/accept` aceita. Se o e-mail ainda não tiver conta, ela é criada com `name` e `password`; se já tiver, é preciso informar a senha dela.
 6. Recuperação de senha: `POST /auth/forgot-password` com `email` envia um link válido por 60 minutos (`PASSWORD_RESET_URL?token=...`) e sempre responde `204`, exista a conta ou não, para não revelar quais e-mails estão cadastrados. `POST /auth/reset-password` com `token` e `password` troca a senha e invalida os outros links pendentes do usuário.
@@ -258,16 +258,18 @@ Remover um membro (`DELETE /members/:id`) desvincula o funcionário ligado a ele
 ### Empresas
 
 * `POST /auth/companies` cria uma empresa para o usuário logado (`name`\* e `description`), com ou sem empresa no token (só `ensureAuthenticated`), e responde 201 com a empresa. Quem cria vira dono, com o cargo "Administrador" e todas as permissões.
+* **Logo na criação.** `POST /auth/companies` e `POST /companies` aceitam JSON, como antes, ou `multipart/form-data` com os mesmos campos e a logo opcional no campo `file`, com as regras de "Logo da empresa" (413 acima de 2 MB; 400 para outro formato ou arquivo vazio). A logo é conferida antes de criar qualquer coisa e gravada antes da transação; se a transação falhar, o arquivo sai do armazenamento. O cadastro (`POST /auth/sign-up`) não recebe logo.
 * A montagem de empresa, cargo "Administrador" e dono fica num serviço só, o `CompanyOwnerCreator` (`modules/auth/application/services/`), usado pelo cadastro (que manda também o usuário novo e a verificação de e-mail, tudo numa transação) e por essa rota.
 * O login de uma conta sem empresa responde 200 com `companies` vazio.
 * **Pela plataforma** (`POST /companies`, só o admin da plataforma): `name`\*, `description` e `ownerEmail`\*, o e-mail de um usuário que já existe e está ativo. A empresa nasce com ele como dono, pelo mesmo `CompanyOwnerCreator` (com `createdById` do admin). Sem usuário com o e-mail, 404 ("Nenhum usuário com este e-mail. Cadastre o usuário antes de criar a empresa."); usuário inativo, 400. Antes, a empresa nascia sem dono nem membro, e ninguém a acessava.
 * O módulo de empresa chama o serviço pela porta `PLATFORM_COMPANY_CREATOR` (`src/shared/application/companies/`), que o módulo de auth implementa e registra no container: o auth já importa o módulo de empresa, e o caminho inverso criaria importação circular.
-* `GET /companies` e `GET /companies/:id` (plataforma) trazem `owner` (`{ id, name, email }` ou `null`) e `membersCount` (membros não removidos).
+* `GET /companies` e `GET /companies/:id` (plataforma) trazem `owner` (`{ id, name, email }` ou `null`) e `membersCount` (membros não removidos). A lista aceita `active` (`true`/`false`).
+* **Empresa inativa (D20).** Toda resposta de empresa traz `active`. `POST /companies/current/deactivate` com `{ password }` inativa a empresa do token e responde 204. Só o dono inativa, com a própria senha: quem não é dono recebe 403 ("Só o dono da empresa pode inativá-la."), e a senha errada dá 400 `INVALID_CURRENT_PASSWORD` ("A senha está incorreta."). A empresa inativa some do login, do `/auth/me` e da troca de empresa, e o token de quem estava dentro dela passa a dar 401 na requisição seguinte, como o de um membro removido. Os convites dela dão 404, na prévia e no aceite. Os dados ficam como estavam, e só a plataforma reativa, com `PATCH /companies/:id` e `{ active: true }` (o mesmo `PATCH` também inativa, sem senha). O `PATCH /companies/current` não aceita `active`.
 * `GET /users` (plataforma) aceita `active` (`true`/`false`). O backend não impede o admin de desativar a própria conta; a tela impede.
 
 ### Logo da empresa
 
-* `PUT /companies/current/logo` (com `company.update`) recebe a imagem no campo `file` de um `multipart/form-data`: PNG, JPG ou WEBP, conferidos pelo conteúdo do arquivo (não pelo tipo informado), até 2 MB. Acima disso, 413; outro formato ou arquivo vazio, 400. Responde com a empresa. A logo nova substitui a anterior, que sai do armazenamento.
+* `PUT /companies/current/logo` (com `company.update`) recebe a imagem no campo `file` de um `multipart/form-data`: PNG, JPG ou WEBP, conferidos pelo conteúdo do arquivo (não pelo tipo informado), até 2 MB. Acima disso, 413; outro formato ou arquivo vazio, 400 `INVALID_COMPANY_LOGO`. Responde com a empresa. A logo nova substitui a anterior, que sai do armazenamento.
 * `DELETE /companies/current/logo` (com `company.update`) remove a logo e responde 204, também quando não havia logo.
 * `GET /companies/:id/logo` é **público**, sem token: `<img>` não manda o `Bearer`, e a escolha de empresa mostra empresas para as quais o token ainda não vale. Serve só a logo daquela empresa, com o `Content-Type` da imagem, `Content-Disposition: inline` e `X-Content-Type-Options: nosniff`. Com `?v=` igual ao `logo` atual, a resposta pode ficar um ano no cache (`immutable`); sem ele, ou com outro valor, `no-cache`. Empresa sem logo ou excluída dá 404.
 * O `logo` das respostas (empresa e `companies` do login e do `/auth/me`) é a chave da imagem no armazenamento (`<empresa>/logo-<uuid>.png`), ou `null`. A tela usa esse valor para saber se há logo e como versão da URL: `GET /companies/:id/logo?v=<logo>`.
@@ -276,7 +278,7 @@ Remover um membro (`DELETE /members/:id`) desvincula o funcionário ligado a ele
 ### Convites
 
 * O e-mail do convite leva para `INVITATION_ACCEPT_URL` (padrão `http://localhost:3000/auth/accept-invitation`) com `?token=`. O token só existe no e-mail: a API guarda o hash.
-* `GET /invitations/preview?token=` é público e devolve `email`, `companyName`, `accountExists` (se já há conta com o e-mail), `status` (`pending`, `accepted` ou `expired`) e `expiresAt`, para a tela de aceite saber o que pedir. Token desconhecido, ou convite revogado ou trocado por um mais novo, dá 404.
+* `GET /invitations/preview?token=` é público e devolve `email`, `companyName`, `accountExists` (se já há conta com o e-mail), `status` (`pending`, `accepted` ou `expired`) e `expiresAt`, para a tela de aceite saber o que pedir. Token desconhecido, convite revogado ou trocado por um mais novo, ou empresa inativa, dá 404.
 * `GET /invitations` aceita `status` (`pending`, `accepted`, `expired`).
 * Convidar de novo um e-mail com convite pendente troca o convite (o antigo deixa de valer). O convite aceito não é revogado (409).
 
@@ -298,9 +300,10 @@ Todo erro responde `{ "error": { "code", "message", "details"? } }`. A `message`
 | 400 | `INVALID_REFERENCE` | Um dos IDs informados não existe |
 | 400 | `EMAIL_NOT_VERIFIED` | Cadastro com `verificationToken` inválido ou expirado |
 | 400 | `INSUFFICIENT_BALANCE` | A carteira não tem saldo para o valor da ação comercial ou do desconto num ajuste ("Saldo insuficiente na carteira."): a tela mostra no campo Valor |
-| 400 | `INVALID_CURRENT_PASSWORD` | Troca de senha em Minha conta com a senha atual errada ("A senha atual está incorreta."): a tela mostra no campo Senha atual |
-| 401 | `UNAUTHORIZED` | Credenciais erradas, token ausente, inválido ou expirado, usuário inativo ou acesso à empresa removido |
-| 403 | `FORBIDDEN` | Sem permissão para a ação |
+| 400 | `INVALID_COMPANY_LOGO` | A logo enviada (na criação da empresa ou em `PUT /companies/current/logo`) está vazia ou não é PNG, JPG nem WEBP: a tela mostra no alerta do formulário, não no campo do e-mail do dono |
+| 400 | `INVALID_CURRENT_PASSWORD` | A senha da própria conta, pedida para confirmar uma ação, está errada: na troca de senha em Minha conta ("A senha atual está incorreta.") e ao inativar a empresa ("A senha está incorreta."). A tela mostra no campo da senha |
+| 401 | `UNAUTHORIZED` | Credenciais erradas, token ausente, inválido ou expirado, usuário inativo, acesso à empresa removido ou empresa inativa |
+| 403 | `FORBIDDEN` | Sem permissão para a ação (ex.: inativar a empresa sem ser o dono) |
 | 404 | `RESOURCE_NOT_FOUND` | Registro inexistente (ou de outra empresa) |
 | 409 | `CONFLICT` | Duplicidade, como "Já existe uma pessoa com este documento.": a tela mostra no campo |
 | 409 | `RESOURCE_IN_USE` | Exclusão bloqueada porque outro registro usa este, como "Este potencial está em uso por 3 produtores.": a tela mostra no diálogo de exclusão |

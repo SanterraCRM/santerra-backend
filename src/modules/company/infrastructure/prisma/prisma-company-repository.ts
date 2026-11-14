@@ -44,6 +44,7 @@ export class PrismaCompanyRepository implements CompanyRepository {
   async findMany(params: FindCompaniesParams): Promise<FindCompaniesResult> {
     const where: Prisma.CompanyWhereInput = {
       deletedAt: params.includeDeleted ? undefined : null,
+      active: params.active,
       OR: params.search
         ? [
             { name: { contains: params.search, mode: "insensitive" } },
@@ -80,6 +81,7 @@ export class PrismaCompanyRepository implements CompanyRepository {
         name: data.name,
         description: data.description,
         logo: data.logo,
+        active: data.active,
         updatedAt: data.updatedAt,
         updatedById: data.updatedById,
       },
