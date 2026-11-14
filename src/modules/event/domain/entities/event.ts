@@ -88,7 +88,7 @@ export class Event {
 
   private static normalizeName(name: string): string {
     if (typeof name !== "string" || name.trim().length === 0) {
-      throw new DomainError("O nome do evento é obrigatório.");
+      throw new DomainError("O nome do tipo de evento é obrigatório.");
     }
 
     return name.trim();

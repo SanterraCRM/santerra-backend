@@ -21,7 +21,7 @@ export class DeleteEventUseCase {
     const event = await this.eventRepository.findById(id, context.companyId);
 
     if (!event) {
-      throw new ResourceNotFoundError("Evento não encontrado.");
+      throw new ResourceNotFoundError("Tipo de evento não encontrado.");
     }
 
     const actionsCount = await this.eventRepository.countActions(
@@ -33,7 +33,7 @@ export class DeleteEventUseCase {
       const actions =
         actionsCount === 1 ? "1 ação comercial" : `${actionsCount} ações comerciais`;
 
-      throw new ResourceInUseError(`Este evento está em uso por ${actions}.`);
+      throw new ResourceInUseError(`Este tipo de evento está em uso por ${actions}.`);
     }
 
     event.delete(context.userId);

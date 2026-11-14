@@ -21,7 +21,7 @@ export const ROLES: RoleDefinition[] = [
   {
     name: "Vendedor",
     description:
-      "Cadastra pessoas, produtores, potenciais e revendas, e registra eventos, visitas e ações comerciais.",
+      "Cadastra pessoas, produtores, potenciais, revendas e tipos de evento, e registra visitas e ações comerciais.",
     permissions: [
       PERMISSIONS.PERSONS_READ,
       PERMISSIONS.PERSONS_CREATE,

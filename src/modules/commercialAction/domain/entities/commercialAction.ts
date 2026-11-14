@@ -222,7 +222,7 @@ export class CommercialAction {
 
   private static normalizeEventId(eventId: string): string {
     if (typeof eventId !== "string" || eventId.trim().length === 0) {
-      throw new DomainError("O ID do evento é obrigatório.");
+      throw new DomainError("O ID do tipo de evento é obrigatório.");
     }
 
     return eventId.trim();
