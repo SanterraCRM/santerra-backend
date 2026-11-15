@@ -15,16 +15,18 @@ export class GetCropViewUseCase {
   ) {}
 
   async execute(
-    id: number,
+    productId: number,
+    crop: string,
   ): Promise<CropViewDto> {
-    const crop = await this.cropRepository.findById(
-      id,
+    const crops = await this.cropRepository.findByProductAndCrop(
+      productId,
+      crop
     );
 
-    if (!crop) {
+    if (!crops) {
       throw new ResourceNotFoundError("Cultura não encontrada.");
     }
 
-    return toCropViewDto(crop);
+    return toCropViewDto(crops);
   }
 }
