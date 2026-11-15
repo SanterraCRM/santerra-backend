@@ -16,7 +16,7 @@ import { personRouter } from "./modules/person";
 import { harvestRouter } from "./modules/harvest"
 import { permissionRouter } from "./modules/permission";
 import { roleRouter } from "./modules/role";
-import { resellerRouter } from "./modules/reseller";
+import { resellerViewRouter } from "./modules/resellersView";
 import { potentialRouter } from "./modules/potential";
 import { producerRouter } from "./modules/producer";
 import { userRouter } from "./modules/user";
@@ -49,7 +49,7 @@ app.use("/persons", personRouter());
 app.use("/harvests", harvestRouter());
 app.use("/permissions", permissionRouter());
 app.use("/roles", roleRouter());
-app.use("/resellers", resellerRouter());
+app.use("/resellers", resellerViewRouter());
 app.use("/potentials", potentialRouter());
 app.use("/users", userRouter());
 app.use("/wallets", walletRouter());
