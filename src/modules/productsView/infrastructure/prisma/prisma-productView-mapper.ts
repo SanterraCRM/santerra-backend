@@ -5,9 +5,9 @@ export class PrismaProductViewMapper {
   static toDomain(raw: Prisma.productsViewGetPayload<object>): ProductView {
     return {
       ...raw,
-      weight: raw.weight?.toNumber(),
-      weightNet: raw.weightNet?.toNumber(),
-      volume: raw.volume?.toNumber(),
+      weight: raw.weight?.toNumber() ?? null,
+      weightNet: raw.weightNet?.toNumber() ?? null,
+      volume: raw.volume?.toNumber() ?? null,
     };
   }
 }

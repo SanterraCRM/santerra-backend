@@ -1,5 +1,5 @@
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
   previewFeatures = ["views"]
 }
 
@@ -9,80 +9,80 @@ datasource db {
   schemas  = ["public", "erp_externo"]
 }
 
-view clientsView {
-  companyId        Int      @map("cd_emp")
-  id               Int      @unique @map("cd_clien")
-  isActive         Int      @map("ativo")
-  name             String   @map("nome")
-  fantasyName      String   @map("nome_res")
-  legalType        String   @map("tp_pes_desc")
-  document         String   @map("cgc_cpf")
-  registrationType String   @map("tp_insc_desc")
-  registration     String   @map("inscricao")
-  activity         String   @map("ramo")
-  creditStatus     String   @map("st_cred_desc")
-  clientGroupCode  String   @map("cd_grupocli")
-  clientGroup      String   @map("grupo_cliente")
-  sellerCode       String   @map("cd_vend")
-  areaCode         String   @map("cd_area")
-  area             String   @map("area")
-  createdAt        DateTime @map("dt_cad")
-  lastBuyDate      DateTime @map("dt_ult_compra")
-  lastBuyValue     Decimal  @map("vl_ult_compra")
-  creditLimitValue Decimal  @map("vl_lim_cred")
-  orderType        String   @map("tipo_pedido")
-  route            String   @map("rota")
-  email            String   @map("email")
-  affiliation      String   @map("coligacao")
-  cnae             String   @map("cnae")
-  foundationDate   DateTime @map("DtFundacao")
-  contactName      String   @map("nome_contato")
-  contactPosition  String   @map("cargo_contato")
-  contactEmail     String   @map("email_contato")
-  contactDDD       String   @map("ddd_contato")
-  contactPhone     String   @map("fonecontato")
-  clientPhoneDDD   String   @map("tel_cli_ddd")
-  clientPhone      String   @map("tel_cli_numero")
-  address          String   @map("endereco")
-  neighborhood     String   @map("bairro")
-  city             String   @map("municipio")
-  cep              String   @map("cep")
-  state            String   @map("estado")
-  street           String   @map("logradouro")
-  number           String   @map("numero")
-  complement       String   @map("complemento")
+view resellersView {
+  companyId        Int?      @map("cd_emp")
+  id               Int?      @unique @map("cd_clien")
+  isActive         Int?      @map("ativo")
+  name             String?   @map("nome")
+  fantasyName      String?   @map("nome_res")
+  legalType        String?   @map("tp_pes_desc")
+  document         String?   @map("cgc_cpf")
+  registrationType String?   @map("tp_insc_desc")
+  registration     String?   @map("inscricao")
+  activity         String?   @map("ramo")
+  creditStatus     String?   @map("st_cred_desc")
+  clientGroupCode  String?   @map("cd_grupocli")
+  clientGroup      String?   @map("grupo_cliente")
+  sellerCode       String?   @map("cd_vend")
+  areaCode         String?   @map("cd_area")
+  area             String?   @map("area")
+  createdAt        DateTime? @map("dt_cad")
+  lastBuyDate      DateTime? @map("dt_ult_compra")
+  lastBuyValue     Decimal?  @map("vl_ult_compra")
+  creditLimitValue Decimal?  @map("vl_lim_cred")
+  orderType        String?   @map("tipo_pedido")
+  route            String?   @map("rota")
+  email            String?   @map("e_mail")
+  affiliation      String?   @map("coligacao")
+  cnae             String?   @map("cnae")
+  foundationDate   DateTime? @map("DtFundacao")
+  contactName      String?   @map("nome_contato")
+  contactPosition  String?   @map("cargo_contato")
+  contactEmail     String?   @map("email_contato")
+  contactDDD       String?   @map("ddd_contato")
+  contactPhone     String?   @map("fone_contato")
+  clientPhoneDDD   String?   @map("tel_cli_ddd")
+  clientPhone      String?   @map("tel_cli_numero")
+  address          String?   @map("endereco")
+  neighborhood     String?   @map("bairro")
+  city             String?   @map("municipio")
+  cep              String?   @map("cep")
+  state            String?   @map("estado")
+  street           String?   @map("logradouro")
+  number           String?   @map("numero")
+  complement       String?   @map("complemento")
 
   @@map("mat_base_clientes")
   @@schema("erp_externo")
 }
 
 view cropsView {
-  productId        Int    @map("cd_prod")
-  description      String @map("descricao")
-  activeIngredient String @map("principio_ativo")
-  crop             String @map("cultura_atendida")
+  productId        Int?    @map("cd_prod")
+  description      String? @map("descricao")
+  activeIngredient String? @map("principio_ativo")
+  crop             String? @map("cultura_atendida")
 
   @@map("mat_base_culturas")
   @@schema("erp_externo")
 }
 
 view productsView {
-  id               Int     @unique @map("cd_prod")
-  product          String  @map("produto")
-  isActive         Int     @map("ativo")
-  manufacturerId   String  @map("cd_fabric")
-  manufacturer     String  @map("fabricante")
-  department       String  @map("departamento")
-  section          String  @map("secao")
-  category         String  @map("categoria")
-  line             String  @map("linha")
-  stockUnity       String  @map("unid_est")
-  purchaseUnity    String  @map("unid_cmp")
-  purchaseQuantity Int     @map("qtde_unid_cmp")
-  weight           Decimal @map("peso_brt")
-  weightNet        Decimal @map("peso_liq")
-  volume           Decimal @map("volume")
-  ncm              String  @map("cd_prod_ncm")
+  id               Int?     @unique @map("cd_prod")
+  product          String?  @map("produto")
+  isActive         Int?     @map("ativo")
+  manufacturerId   String?  @map("cd_fabric")
+  manufacturer     String?  @map("fabricante")
+  department       String?  @map("departamento")
+  section          String?  @map("secao")
+  category         String?  @map("categoria")
+  line             String?  @map("linha")
+  stockUnity       String?  @map("unid_est")
+  purchaseUnity    String?  @map("unid_cmp")
+  purchaseQuantity Int?     @map("qtde_unid_cmp")
+  weight           Decimal? @map("peso_brt")
+  weightNet        Decimal? @map("peso_liq")
+  volume           Decimal? @map("volume")
+  ncm              String?  @map("cd_prod_ncm")
 
   @@map("mat_base_produtos")
   @@schema("erp_externo")
@@ -382,9 +382,9 @@ model Permission {
   name        String  @unique
   description String?
 
-  @@schema("public")
-
   roles RolePermission[]
+
+  @@schema("public")
 }
 
 model UserRole {
