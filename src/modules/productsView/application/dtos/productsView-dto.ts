@@ -1,22 +1,22 @@
 import { ProductView } from "../../domain/entities/productView";
 
 export interface ProductViewDto {
-  id: number;
-  product: string;
-  isActive: number;
-  manufacturerId: string;
-  manufacturer: string;
-  department: string;
-  section: string;
-  category: string;
-  line: string;
-  stockUnity: string;
-  purchaseUnity: string;
-  purchaseQuantity: number;
-  weight: number;
-  weightNet: number;
-  volume: number;
-  ncm: string;
+  id: number | null;
+  product: string | null;
+  isActive: number | null;
+  manufacturerId: string | null;
+  manufacturer: string | null;
+  department: string | null;
+  section: string | null;
+  category: string | null;
+  line: string | null;
+  stockUnity: string | null;
+  purchaseUnity: string | null;
+  purchaseQuantity: number | null;
+  weight: number | null;
+  weightNet: number | null;
+  volume: number | null;
+  ncm: string | null;
 }
 
 export function toProductViewDto(
