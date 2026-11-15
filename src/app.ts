@@ -10,7 +10,7 @@ import { eventRouter } from "./modules/event";
 import { fileRouter } from "./modules/file";
 import { invitationRouter } from "./modules/invitation";
 import { memberRouter } from "./modules/member";
-import { productRouter } from "./modules/product";
+import { productViewRouter } from "./modules/productsView";
 import { manufacturerRouter } from "./modules/manufacturer";
 import { personRouter } from "./modules/person";
 import { harvestRouter } from "./modules/harvest"
@@ -43,7 +43,7 @@ app.use("/auth", authRouter());
 app.use("/members", memberRouter());
 app.use("/invitations", invitationRouter());
 app.use("/companies", companyRouter());
-app.use("/products", productRouter());
+app.use("/products", productViewRouter());
 app.use("/manufacturers", manufacturerRouter());
 app.use("/persons", personRouter());
 app.use("/harvests", harvestRouter());
