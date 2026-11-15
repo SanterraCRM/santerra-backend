@@ -3,7 +3,7 @@ import { container } from "tsyringe";
 
 import { PERMISSIONS } from "../../../../shared/application/auth/permissions";
 import { ensurePermission } from "../../../../shared/http/middlewares/ensure-permission";
-import { ResellerViewController } from "./reseller-controller";
+import { ResellerViewController } from "./resellerView-controller";
 
 export function resellerViewRouter(): Router {
   const router = Router();
