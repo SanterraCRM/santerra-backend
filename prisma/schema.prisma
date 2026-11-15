@@ -62,6 +62,7 @@ view cropsView {
   activeIngredient String? @map("principio_ativo")
   crop             String? @map("cultura_atendida")
 
+  @@unique([productId, crop])
   @@map("mat_base_culturas")
   @@schema("erp_externo")
 }
