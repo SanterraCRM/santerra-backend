@@ -1,4 +1,5 @@
 import { ProductView } from "../../domain/entities/productView";
+import { ProductViewFilterOptions } from "../../domain/repositories/productView-repository";
 
 export interface ProductViewDto {
   id: number | null;
@@ -17,12 +18,18 @@ export interface ProductViewDto {
   weightNet: number | null;
   volume: number | null;
   ncm: string | null;
+  // Culturas atendidas (view de culturas), ligadas apenas pelo código do produto.
+  crops: string[];
 }
+
+export type ProductViewFilterOptionsDto = ProductViewFilterOptions;
 
 export function toProductViewDto(
   product: ProductView,
+  crops: string[] = [],
 ): ProductViewDto {
   return {
     ...product,
+    crops,
   };
 }

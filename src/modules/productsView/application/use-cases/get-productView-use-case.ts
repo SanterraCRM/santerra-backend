@@ -1,6 +1,5 @@
 import { inject, injectable } from "tsyringe";
 
-import { TenantContext } from "../../../../shared/application/auth/auth-context";
 import { ResourceNotFoundError } from "../../../../shared/errors/app-error";
 import {
   PRODUCT_VIEW_REPOSITORY,
@@ -15,17 +14,16 @@ export class GetProductViewUseCase {
     private readonly productRepository: ProductViewRepository,
   ) {}
 
-  async execute(
-    id: number,
-  ): Promise<ProductViewDto> {
-    const product = await this.productRepository.findById(
-      id,
-    );
+  async execute(id: number): Promise<ProductViewDto> {
+    const [product, crops] = await Promise.all([
+      this.productRepository.findById(id),
+      this.productRepository.findCropsByProductIds([id]),
+    ]);
 
     if (!product) {
       throw new ResourceNotFoundError("Produto não encontrado.");
     }
 
-    return toProductViewDto(product);
+    return toProductViewDto(product, crops.get(id));
   }
 }
