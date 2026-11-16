@@ -259,7 +259,6 @@ model User {
   updatedBy User? @relation("UserUpdatedBy", fields: [updatedById], references: [id])
   deletedBy User? @relation("UserDeletedBy", fields: [deletedById], references: [id])
 
-  // Único entre ativos: (email).
   @@index([deletedAt])
   @@schema("public")
 }
@@ -586,7 +585,6 @@ model Reseller {
 
   company Company @relation(fields: [companyId], references: [id])
 
-  commercialActionGuests CommercialActionResellerGuest[]
 
   createdBy User? @relation("ResellerCreatedBy", fields: [createdById], references: [id])
   updatedBy User? @relation("ResellerUpdatedBy", fields: [updatedById], references: [id])
@@ -677,11 +675,10 @@ model CommercialActionProducerGuest {
 model CommercialActionResellerGuest {
   id                 String @id @default(uuid()) @db.Uuid
   commercialActionId String @db.Uuid
-  resellerId         String @db.Uuid
+  resellerId         Int
   companyId          String @db.Uuid
 
   commercialAction CommercialAction @relation(fields: [commercialActionId, companyId], references: [id, companyId])
-  reseller         Reseller         @relation(fields: [resellerId, companyId], references: [id, companyId])
 
   @@unique([commercialActionId, resellerId])
   @@index([resellerId])
@@ -874,7 +871,6 @@ model ProductGroup {
 model ProductRecommendation {
   id               String @id @default(uuid()) @db.Uuid
   commercialTripId String @db.Uuid
-  // Código do produto na view erp_externo.mat_base_produtos (cd_prod). Sem FK: views não aceitam relação.
   productId        Int
   companyId        String @db.Uuid
 

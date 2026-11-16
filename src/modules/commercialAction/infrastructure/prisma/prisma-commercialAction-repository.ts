@@ -17,7 +17,10 @@ import {
   commercialActionDetailsInclude,
   commercialActionInclude,
   PrismaCommercialActionMapper,
+  ResellerNames,
 } from "./prisma-commercialAction-mapper";
+
+type ResellerGuestRows = { resellerGuests: { resellerId: number }[] }[];
 
 @injectable()
 export class PrismaCommercialActionRepository implements CommercialActionRepository {
@@ -43,7 +46,7 @@ export class PrismaCommercialActionRepository implements CommercialActionReposit
       });
     });
 
-    return PrismaCommercialActionMapper.toDetails(createdCommercialAction);
+    return this.toDetails(createdCommercialAction);
   }
 
   async findById(
@@ -69,7 +72,7 @@ export class PrismaCommercialActionRepository implements CommercialActionReposit
       include: commercialActionDetailsInclude,
     });
 
-    return commercialAction ? PrismaCommercialActionMapper.toDetails(commercialAction) : null;
+    return commercialAction ? this.toDetails(commercialAction) : null;
   }
 
   async findMany(params: FindCommercialActionsParams): Promise<FindCommercialActionsResult> {
@@ -99,8 +102,12 @@ export class PrismaCommercialActionRepository implements CommercialActionReposit
       this.prisma.commercialAction.count({ where }),
     ]);
 
+    const resellerNames = await this.findResellerNames(commercialActions);
+
     return {
-      commercialActions: commercialActions.map(PrismaCommercialActionMapper.toDetails),
+      commercialActions: commercialActions.map((commercialAction) =>
+        PrismaCommercialActionMapper.toDetails(commercialAction, resellerNames),
+      ),
       total,
     };
   }
@@ -144,7 +151,42 @@ export class PrismaCommercialActionRepository implements CommercialActionReposit
       });
     });
 
-    return PrismaCommercialActionMapper.toDetails(updatedCommercialAction);
+    return this.toDetails(updatedCommercialAction);
+  }
+
+  private async toDetails(
+    commercialAction: Parameters<typeof PrismaCommercialActionMapper.toDetails>[0],
+  ): Promise<CommercialActionDetails> {
+    const resellerNames = await this.findResellerNames([commercialAction]);
+
+    return PrismaCommercialActionMapper.toDetails(commercialAction, resellerNames);
+  }
+
+  private async findResellerNames(commercialActions: ResellerGuestRows): Promise<ResellerNames> {
+    const ids = [
+      ...new Set(
+        commercialActions.flatMap(({ resellerGuests }) =>
+          resellerGuests.map(({ resellerId }) => resellerId),
+        ),
+      ),
+    ];
+
+    if (ids.length === 0) {
+      return new Map();
+    }
+
+    const resellers = await this.prisma.resellersView.findMany({
+      where: { id: { in: ids } },
+      select: { id: true, name: true, fantasyName: true },
+    });
+
+    return new Map(
+      resellers.flatMap(({ id, name, fantasyName }) => {
+        const label = name?.trim() || fantasyName?.trim();
+
+        return id === null || !label ? [] : [[id, label] as const];
+      }),
+    );
   }
 
   async delete(commercialAction: CommercialAction): Promise<void> {

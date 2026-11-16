@@ -4,6 +4,7 @@ import { CommercialAction } from "../../domain/entities/commercialAction";
 import {
   CommercialActionDetails,
   CommercialActionRelation,
+  CommercialActionReseller,
 } from "../../domain/repositories/commercialAction-repository";
 
 const personName = { select: { id: true, person: { select: { name: true } } } } as const;
@@ -15,7 +16,6 @@ export const commercialActionInclude = {
     select: { producerId: true },
   },
   resellerGuests: {
-    where: { reseller: { deletedAt: null } },
     select: { resellerId: true },
   },
   participants: {
@@ -34,8 +34,7 @@ export const commercialActionDetailsInclude = {
     select: { producerId: true, producer: personName },
   },
   resellerGuests: {
-    where: { reseller: { deletedAt: null } },
-    select: { resellerId: true, reseller: relationName },
+    select: { resellerId: true },
   },
   participants: {
     where: { employee: { deletedAt: null } },
@@ -67,7 +66,12 @@ function toRelation({ id, person }: PersonRelation): CommercialActionRelation {
   return { id, name: person.name };
 }
 
-function byName(first: CommercialActionRelation, second: CommercialActionRelation): number {
+export type ResellerNames = Map<number, string>;
+
+function byName(
+  first: CommercialActionRelation | CommercialActionReseller,
+  second: CommercialActionRelation | CommercialActionReseller,
+): number {
   return first.name.localeCompare(second.name, "pt-BR");
 }
 
@@ -97,19 +101,22 @@ export class PrismaCommercialActionMapper {
     });
   }
 
-  static toDetails({
-    event,
-    responsible,
-    wallet,
-    ...raw
-  }: PrismaCommercialActionDetails): CommercialActionDetails {
+  static toDetails(
+    { event, responsible, wallet, ...raw }: PrismaCommercialActionDetails,
+    resellerNames: ResellerNames,
+  ): CommercialActionDetails {
     return {
       commercialAction: PrismaCommercialActionMapper.toDomain(raw),
       event,
       responsible: toRelation(responsible),
       wallet: { id: wallet.id, name: wallet.userCompany.user.name },
       producerGuests: raw.producerGuests.map(({ producer }) => toRelation(producer)).sort(byName),
-      resellerGuests: raw.resellerGuests.map(({ reseller }) => reseller).sort(byName),
+      resellerGuests: raw.resellerGuests
+        .map(({ resellerId }) => ({
+          id: resellerId,
+          name: resellerNames.get(resellerId) ?? `Revenda ${resellerId}`,
+        }))
+        .sort(byName),
       participants: raw.participants.map(({ employee }) => toRelation(employee)).sort(byName),
       files: raw.files.map(({ file }) => file),
     };
