@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import {
+  booleanQuerySchema,
   createdAtRangeQuerySchema,
   listQuerySchema,
 } from "../../../../shared/http/request-schemas";
@@ -13,6 +14,7 @@ export const resellerViewIdParamSchema = z.object({
 
 export const listResellersViewQuerySchema = listQuerySchema.extend({
   search: z.string().trim().optional(),
+  isActive: booleanQuerySchema.optional(),
   ...createdAtRangeQuerySchema.shape,
   missing: z
     .string()

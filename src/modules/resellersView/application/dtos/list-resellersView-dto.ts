@@ -4,6 +4,7 @@ export interface ListResellersViewDto {
   page?: number;
   limit?: number;
   search?: string;
+  isActive?: boolean;
   createdFrom?: Date;
   createdTo?: Date;
   missing?: ResellerViewMissingField[];

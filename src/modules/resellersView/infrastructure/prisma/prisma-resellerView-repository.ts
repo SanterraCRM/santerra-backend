@@ -12,6 +12,8 @@ import { PrismaResellerViewMapper } from "./prisma-resellerView-mapper";
 
 const TIME_ZONE = "America/Sao_Paulo";
 
+const ACTIVE = 1;
+
 const localDayFormatter = new Intl.DateTimeFormat("en-CA", {
   timeZone: TIME_ZONE,
   year: "numeric",
@@ -81,6 +83,14 @@ export class PrismaResellerViewRepository implements ResellerViewRepository {
           { document: { contains: params.search } },
         ],
       });
+    }
+
+    if (params.isActive !== undefined) {
+      conditions.push(
+        params.isActive
+          ? { isActive: ACTIVE }
+          : { OR: [{ isActive: { not: ACTIVE } }, { isActive: null }] },
+      );
     }
 
     if (params.createdFrom || params.createdTo) {
