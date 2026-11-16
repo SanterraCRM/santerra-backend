@@ -1,9 +1,7 @@
 import { Router } from "express";
 import { container } from "tsyringe";
 
-import { PERMISSIONS } from "../../../../shared/application/auth/permissions";
 import { ensureAuthenticated } from "../../../../shared/http/middlewares/ensure-authenticated";
-import { ensurePermission } from "../../../../shared/http/middlewares/ensure-permission";
 import { CropViewController } from "./cropView-controller";
 
 export function cropViewRouter(): Router {
@@ -13,7 +11,7 @@ export function cropViewRouter(): Router {
   router.use(ensureAuthenticated);
 
   router.get("/", controller.list);
-  router.get("/:id", controller.getById);
+  router.get("/:productId", controller.getById);
 
   return router;
 }
