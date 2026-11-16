@@ -1,12 +1,25 @@
 import { Prisma } from "@prisma/client";
 import { ResellerView } from "../../domain/entities/resellersView";
 
+type RawResellerView = Prisma.resellersViewGetPayload<object>;
+
+function trimTexts(raw: RawResellerView): RawResellerView {
+  return Object.fromEntries(
+    Object.entries(raw).map(([key, value]) => [
+      key,
+      typeof value === "string" ? value.trim() || null : value,
+    ]),
+  ) as RawResellerView;
+}
+
 export class PrismaResellerViewMapper {
-  static toDomain(raw: Prisma.resellersViewGetPayload<object>): ResellerView {
+  static toDomain(raw: RawResellerView): ResellerView {
+    const reseller = trimTexts(raw);
+
     return {
-      ...raw,
-      lastBuyValue: raw.lastBuyValue?.toNumber() ?? null,
-      creditLimitValue: raw.creditLimitValue?.toNumber() ?? null,
+      ...reseller,
+      lastBuyValue: reseller.lastBuyValue?.toNumber() ?? null,
+      creditLimitValue: reseller.creditLimitValue?.toNumber() ?? null,
     };
   }
 }
