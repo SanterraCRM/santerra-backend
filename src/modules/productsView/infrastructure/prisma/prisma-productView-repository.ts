@@ -8,22 +8,26 @@ import {
   ProductViewFilterOptions,
   ProductViewRepository,
 } from "../../domain/repositories/productView-repository";
-import { PrismaProductViewMapper } from "./prisma-productView-mapper";
+import { PrismaProductViewMapper, trimViewText } from "./prisma-productView-mapper";
 
 const ACTIVE = 1;
 
 type TextField = "department" | "section" | "category" | "line";
 
+type FilterField = TextField | "manufacturerId";
+
 const TEXT_FIELDS: TextField[] = ["department", "section", "category", "line"];
 
-function equalsInsensitive(value: string): Prisma.StringNullableFilter<"productsView"> {
-  return { equals: value, mode: "insensitive" };
+function normalize(value: string): string {
+  return value.trim().toLocaleLowerCase("pt-BR");
 }
 
 function compactSorted(values: (string | null)[]): string[] {
-  return values
-    .filter((value): value is string => Boolean(value?.trim()))
-    .sort((first, second) => first.localeCompare(second, "pt-BR"));
+  const unique = new Set(
+    values.map(trimViewText).filter((value): value is string => value !== null),
+  );
+
+  return [...unique].sort((first, second) => first.localeCompare(second, "pt-BR"));
 }
 
 @injectable()
@@ -109,11 +113,20 @@ export class PrismaProductViewRepository implements ProductViewRepository {
         }),
       ]);
 
+    const manufacturersById = new Map<string, string>();
+
+    manufacturers.forEach((row) => {
+      const id = trimViewText(row.manufacturerId);
+      const name = trimViewText(row.manufacturer);
+
+      if (id && name) {
+        manufacturersById.set(id, name);
+      }
+    });
+
     return {
-      manufacturers: manufacturers
-        .flatMap(({ manufacturerId, manufacturer }) =>
-          manufacturerId && manufacturer ? [{ id: manufacturerId, name: manufacturer }] : [],
-        )
+      manufacturers: [...manufacturersById]
+        .map(([id, name]) => ({ id, name }))
         .sort((first, second) => first.name.localeCompare(second.name, "pt-BR")),
       departments,
       sections,
@@ -135,6 +148,20 @@ export class PrismaProductViewRepository implements ProductViewRepository {
     );
   }
 
+  // A view guarda alguns textos com espaços à direita, e o Prisma não compara com trim.
+  // Busca os valores brutos que começam pelo filtro e mantém os que, sem espaços, são iguais a ele.
+  private async findRawValues(field: FilterField, value: string): Promise<string[]> {
+    const rows = await this.prisma.productsView.findMany({
+      where: { [field]: { startsWith: value.trim(), mode: "insensitive" } },
+      select: { [field]: true },
+      distinct: [field],
+    });
+
+    return rows
+      .map((row) => (row as Partial<Record<FilterField, string | null>>)[field] ?? null)
+      .filter((raw): raw is string => raw !== null && normalize(raw) === normalize(value));
+  }
+
   private async buildWhere(
     params: FindProductsViewParams,
   ): Promise<Prisma.productsViewWhereInput> {
@@ -152,17 +179,13 @@ export class PrismaProductViewRepository implements ProductViewRepository {
       );
     }
 
-    if (params.manufacturerId) {
-      conditions.push({ manufacturerId: params.manufacturerId });
-    }
-
-    TEXT_FIELDS.forEach((field) => {
+    for (const field of ["manufacturerId", ...TEXT_FIELDS] as FilterField[]) {
       const value = params[field];
 
       if (value) {
-        conditions.push({ [field]: equalsInsensitive(value) });
+        conditions.push({ [field]: { in: await this.findRawValues(field, value) } });
       }
-    });
+    }
 
     if (params.crop) {
       const rows = await this.prisma.cropsView.findMany({
