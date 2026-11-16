@@ -823,7 +823,6 @@ model Product {
   company      Company      @relation(fields: [companyId], references: [id])
 
   groups          ProductGroup[]
-  recommendations ProductRecommendation[]
   files           FileProduct[]
 
   createdBy User? @relation("ProductCreatedBy", fields: [createdById], references: [id])
@@ -875,11 +874,11 @@ model ProductGroup {
 model ProductRecommendation {
   id               String @id @default(uuid()) @db.Uuid
   commercialTripId String @db.Uuid
-  productId        String @db.Uuid
+  // Código do produto na view erp_externo.mat_base_produtos (cd_prod). Sem FK: views não aceitam relação.
+  productId        Int
   companyId        String @db.Uuid
 
   commercialTrip CommercialTrip @relation(fields: [commercialTripId, companyId], references: [id, companyId])
-  product        Product        @relation(fields: [productId, companyId], references: [id, companyId])
 
   @@unique([commercialTripId, productId])
   @@schema("public")

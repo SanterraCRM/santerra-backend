@@ -11,6 +11,6 @@ export interface CreateCommercialTripDto {
   responsibleId: string;
   participantIds?: string[];
   harvestIds?: string[];
-  recommendedProductIds?: string[];
+  recommendedProductIds?: number[];
   fileIds?: string[];
 }

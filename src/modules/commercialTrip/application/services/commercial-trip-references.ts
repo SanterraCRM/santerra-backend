@@ -5,7 +5,7 @@ import { EMPLOYEE_REPOSITORY, EmployeeRepository } from "../../../employee";
 import { FILE_REPOSITORY, FileRepository } from "../../../file";
 import { HARVEST_REPOSITORY, HarvestRepository } from "../../../harvest";
 import { PRODUCER_REPOSITORY, ProducerRepository } from "../../../producer";
-import { PRODUCT_REPOSITORY, ProductRepository } from "../../../product";
+import { PRODUCT_VIEW_REPOSITORY, ProductViewRepository } from "../../../productsView";
 import { CommercialTrip } from "../../domain/entities/commercialTrip";
 import { UpdateCommercialTripDto } from "../dtos/update-commercialTrip-dto";
 
@@ -18,8 +18,8 @@ export class CommercialTripReferences {
     private readonly employeeRepository: EmployeeRepository,
     @inject(HARVEST_REPOSITORY)
     private readonly harvestRepository: HarvestRepository,
-    @inject(PRODUCT_REPOSITORY)
-    private readonly productRepository: ProductRepository,
+    @inject(PRODUCT_VIEW_REPOSITORY)
+    private readonly productViewRepository: ProductViewRepository,
     @inject(FILE_REPOSITORY)
     private readonly fileRepository: FileRepository,
   ) {}
@@ -70,7 +70,8 @@ export class CommercialTripReferences {
     if (changes.recommendedProductIds !== undefined) {
       await this.ensureAll(
         commercialTrip.recommendedProductIds,
-        (ids) => this.productRepository.findManyByIds(ids, companyId),
+        // Produtos vêm da view do ERP (sem tenant): basta o código existir na view.
+        (ids) => this.productViewRepository.findManyByIds(ids),
         "Produto recomendado não encontrado.",
       );
     }
@@ -84,9 +85,9 @@ export class CommercialTripReferences {
     }
   }
 
-  private async ensureAll(
-    ids: string[],
-    findManyByIds: (ids: string[]) => Promise<unknown[]>,
+  private async ensureAll<T extends string | number>(
+    ids: T[],
+    findManyByIds: (ids: T[]) => Promise<unknown[]>,
     message: string,
   ): Promise<void> {
     if (ids.length > 0 && (await findManyByIds(ids)).length !== ids.length) {
