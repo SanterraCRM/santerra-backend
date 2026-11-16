@@ -1,10 +1,12 @@
 import { RequestHandler } from "express";
 import { injectable } from "tsyringe";
 
-import { idParamSchema } from "../../../../shared/http/request-schemas";
 import { GetResellerViewUseCase } from "../../application/use-cases/get-resellerView-use-case";
 import { ListResellersViewUseCase } from "../../application/use-cases/list-resellersView-use-case";
-import { listResellersViewQuerySchema } from "./resellerView-schemas";
+import {
+  listResellersViewQuerySchema,
+  resellerViewIdParamSchema,
+} from "./resellerView-schemas";
 
 @injectable()
 export class ResellerViewController {
@@ -22,11 +24,9 @@ export class ResellerViewController {
   };
 
   getById: RequestHandler = async (request, response) => {
-    const { id } = idParamSchema.parse(request.params);
+    const { id } = resellerViewIdParamSchema.parse(request.params);
 
-    const reseller = await this.getResellerViewUseCase.execute(
-      Number(id),
-    );
+    const reseller = await this.getResellerViewUseCase.execute(id);
 
     response.status(200).json(reseller);
   };
