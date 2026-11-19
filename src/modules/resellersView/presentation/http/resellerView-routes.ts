@@ -1,9 +1,7 @@
 import { Router } from "express";
 import { container } from "tsyringe";
 
-import { PERMISSIONS } from "../../../../shared/application/auth/permissions";
 import { ensureAuthenticated } from "../../../../shared/http/middlewares/ensure-authenticated";
-import { ensurePermission } from "../../../../shared/http/middlewares/ensure-permission";
 import { ResellerViewController } from "./resellerView-controller";
 
 export function resellerViewRouter(): Router {

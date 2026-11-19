@@ -5,9 +5,8 @@ import {
   PRODUCT_VIEW_REPOSITORY,
   ProductViewRepository,
 } from "../../domain/repositories/productView-repository";
-import { ProductViewDto } from "../dtos/productsView-dto";
-import { toProductViewDto } from "../dtos/productsView-dto";
 import { ListProductsViewDto } from "../dtos/list-productsView-dto";
+import { ProductViewDto, toProductViewDto } from "../dtos/productsView-dto";
 
 const DEFAULT_PAGE = 1;
 const DEFAULT_LIMIT = 20;
@@ -19,21 +18,28 @@ export class ListProductsViewUseCase {
     private readonly productRepository: ProductViewRepository,
   ) {}
 
-  async execute(
-    input: ListProductsViewDto,
-  ): Promise<PaginatedDto<ProductViewDto>> {
-    const page = input.page ?? DEFAULT_PAGE;
-    const limit = input.limit ?? DEFAULT_LIMIT;
-    const search = input.search?.trim() || undefined;
-
+  async execute({
+    page = DEFAULT_PAGE,
+    limit = DEFAULT_LIMIT,
+    search,
+    ...filters
+  }: ListProductsViewDto): Promise<PaginatedDto<ProductViewDto>> {
     const result = await this.productRepository.findMany({
+      ...filters,
       page,
       limit,
-      search,
+      search: search?.trim() || undefined,
     });
 
+    const productIds = result.productsView
+      .map((product) => product.id)
+      .filter((id): id is number => id !== null);
+    const crops = await this.productRepository.findCropsByProductIds(productIds);
+
     return {
-      data: result.productsView.map(toProductViewDto),
+      data: result.productsView.map((product) =>
+        toProductViewDto(product, product.id === null ? [] : crops.get(product.id)),
+      ),
       meta: {
         page,
         limit,

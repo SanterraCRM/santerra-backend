@@ -3,6 +3,7 @@ import { Prisma } from "@prisma/client";
 import { CommercialTrip } from "../../domain/entities/commercialTrip";
 import {
   CommercialTripDetails,
+  CommercialTripProduct,
   CommercialTripRelation,
 } from "../../domain/repositories/commercialTrip-repository";
 import { CommercialTripStatus } from "../../enumCommercialTrip/EnumCommercialTrip";
@@ -19,7 +20,6 @@ export const commercialTripInclude = {
     select: { harvestId: true },
   },
   recommendations: {
-    where: { product: { deletedAt: null } },
     select: { productId: true },
   },
   files: {
@@ -37,9 +37,9 @@ export const commercialTripDetailsInclude = {
     where: { harvest: { deletedAt: null } },
     select: { harvestId: true, harvest: { select: { id: true, name: true } } },
   },
+  // Sem relação: o nome do produto vem da view do ERP (ver PrismaCommercialTripRepository).
   recommendations: {
-    where: { product: { deletedAt: null } },
-    select: { productId: true, product: { select: { id: true, name: true } } },
+    select: { productId: true },
   },
   files: {
     where: { file: { deletedAt: null } },
@@ -66,7 +66,12 @@ function toRelation({ id, person }: PersonRelation): CommercialTripRelation {
   return { id, name: person.name };
 }
 
-function byName(first: CommercialTripRelation, second: CommercialTripRelation): number {
+export type ProductNames = Map<number, string>;
+
+function byName(
+  first: CommercialTripRelation | CommercialTripProduct,
+  second: CommercialTripRelation | CommercialTripProduct,
+): number {
   return first.name.localeCompare(second.name, "pt-BR");
 }
 
@@ -96,14 +101,22 @@ export class PrismaCommercialTripMapper {
     });
   }
 
-  static toDetails({ producer, responsible, ...raw }: PrismaCommercialTripDetails): CommercialTripDetails {
+  static toDetails(
+    { producer, responsible, ...raw }: PrismaCommercialTripDetails,
+    productNames: ProductNames,
+  ): CommercialTripDetails {
     return {
       commercialTrip: PrismaCommercialTripMapper.toDomain(raw),
       producer: toRelation(producer),
       responsible: toRelation(responsible),
       participants: raw.participants.map(({ employee }) => toRelation(employee)).sort(byName),
       harvests: raw.harvests.map(({ harvest }) => harvest).sort(byName),
-      recommendedProducts: raw.recommendations.map(({ product }) => product).sort(byName),
+      recommendedProducts: raw.recommendations
+        .map(({ productId }) => ({
+          id: productId,
+          name: productNames.get(productId) ?? `Produto ${productId}`,
+        }))
+        .sort(byName),
       files: raw.files.map(({ file }) => file),
     };
   }

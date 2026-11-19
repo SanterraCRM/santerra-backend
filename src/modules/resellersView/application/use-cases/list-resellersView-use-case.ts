@@ -5,9 +5,8 @@ import {
   RESELLER_VIEW_REPOSITORY,
   ResellerViewRepository,
 } from "../../domain/repositories/resellerView-repository";
-import { ResellerViewDto } from "../dtos/resellersView-dto";
-import { toResellerViewDto } from "../dtos/resellersView-dto";
 import { ListResellersViewDto } from "../dtos/list-resellersView-dto";
+import { ResellerViewDto, toResellerViewDto } from "../dtos/resellersView-dto";
 
 const DEFAULT_PAGE = 1;
 const DEFAULT_LIMIT = 20;
@@ -19,17 +18,17 @@ export class ListResellersViewUseCase {
     private readonly resellerRepository: ResellerViewRepository,
   ) {}
 
-  async execute(
-    input: ListResellersViewDto,
-  ): Promise<PaginatedDto<ResellerViewDto>> {
-    const page = input.page ?? DEFAULT_PAGE;
-    const limit = input.limit ?? DEFAULT_LIMIT;
-    const search = input.search?.trim() || undefined;
-
+  async execute({
+    page = DEFAULT_PAGE,
+    limit = DEFAULT_LIMIT,
+    search,
+    ...filters
+  }: ListResellersViewDto): Promise<PaginatedDto<ResellerViewDto>> {
     const result = await this.resellerRepository.findMany({
+      ...filters,
       page,
       limit,
-      search,
+      search: search?.trim() || undefined,
     });
 
     return {
