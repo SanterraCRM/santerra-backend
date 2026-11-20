@@ -26,6 +26,8 @@ export interface ResellerViewRepository {
 
   findManyByIds(ids: number[]): Promise<ResellerView[]>;
 
+  findManyByDocuments(documents: string[]): Promise<ResellerView[]>;
+
   findMany(
     params: FindResellersViewParams,
   ): Promise<FindResellersViewResult>;
