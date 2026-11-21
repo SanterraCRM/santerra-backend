@@ -26,6 +26,7 @@ import { commercialTripRouter } from "./modules/commercialTrip";
 import { commercialActionRouter } from "./modules/commercialAction";
 import { groupRouter } from "./modules/group";
 import { cropViewRouter } from "./modules/cropsView";
+import { pogPocRouter } from "./modules/pogPoc";
 
 import { errorHandler } from "./shared/http/middlewares/error-handler";
 
@@ -62,6 +63,7 @@ app.use("/commercial-trips", commercialTripRouter());
 app.use("/commercial-actions", commercialActionRouter());
 app.use("/groups", groupRouter());
 app.use("/crops", cropViewRouter());
+app.use("/pog-poc", pogPocRouter());
 app.use("/dashboard", dashboardRouter());
 
 app.use((_request, response) => {

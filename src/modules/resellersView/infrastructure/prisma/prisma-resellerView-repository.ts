@@ -53,6 +53,19 @@ export class PrismaResellerViewRepository implements ResellerViewRepository {
     return resellersView.map(PrismaResellerViewMapper.toDomain);
   }
 
+  async findManyByDocuments(documents: string[]): Promise<ResellerView[]> {
+    if (documents.length === 0) {
+      return [];
+    }
+
+    const resellersView = await this.prisma.resellersView.findMany({
+      where: { document: { in: documents } },
+      orderBy: { id: "asc" },
+    });
+
+    return resellersView.map(PrismaResellerViewMapper.toDomain);
+  }
+
   async findMany(params: FindResellersViewParams): Promise<FindResellersViewResult> {
     const where = this.buildWhere(params);
 
