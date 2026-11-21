@@ -137,7 +137,7 @@ Cargos e permissões, definidos em `prisma/seeds/main/roles.ts`. O Administrador
 | `wallets` | — | read, create, update, delete |
 | `files` | read, create | read, create, update |
 
-`company`, `roles`, `invitations` e os `delete` que não aparecem na tabela ficam só com o Administrador.
+`company`, `roles`, `invitations`, o `members.create` e os `delete` que não aparecem na tabela ficam só com o Administrador.
 
 Para testar a seed: `yarn test:seed:main` cria um banco temporário no servidor do `DATABASE_URL` (o usuário do banco precisa poder criar bancos), aplica as migrations, roda a seed nos cenários (proteções, `--dry-run`, primeira e segunda execução, falha na verificação, permissão faltando) e apaga o banco no final. O banco do `DATABASE_URL` não é alterado.
 
@@ -149,7 +149,7 @@ Um usuário é uma conta global e pode participar de várias empresas, com cargo
 2. `POST /auth/login` devolve um token sem empresa e a lista `companies`, só com as empresas ativas.
 3. `POST /auth/select-company` (com o token do login) devolve um token com a empresa escolhida. Também serve para trocar de empresa. Empresa inativa ou excluída dá 403.
 4. As rotas da empresa (`/persons`, `/products`, `/wallets`, `/files`, `/roles`, `/members`, `/invitations`, `/companies/current`) usam o token com empresa no header `Authorization: Bearer <token>`, e cada ação exige a permissão correspondente nos cargos do usuário.
-5. Novos funcionários entram por convite: `POST /invitations` envia o link por e-mail e `POST /invitations/accept` aceita. Se o e-mail ainda não tiver conta, ela é criada com `name` e `password`; se já tiver, é preciso informar a senha dela.
+5. Novos funcionários entram por convite: `POST /invitations` envia o link por e-mail e `POST /invitations/accept` aceita. Se o e-mail ainda não tiver conta, ela é criada com `name` e `password`; se já tiver, é preciso informar a senha dela. Também podem ser adicionados direto, sem convite, com `POST /members` (ver "Membros sem convite").
 6. Recuperação de senha: `POST /auth/forgot-password` com `email` envia um link válido por 60 minutos (`PASSWORD_RESET_URL?token=...`) e sempre responde `204`, exista a conta ou não, para não revelar quais e-mails estão cadastrados. `POST /auth/reset-password` com `token` e `password` troca a senha e invalida os outros links pendentes do usuário.
 7. Minha conta: com qualquer token, com ou sem empresa, `PATCH /auth/me` com `name` muda o nome do próprio usuário e devolve o usuário, e `PATCH /auth/me/password` com `currentPassword` e `newPassword` troca a senha (`204`) e invalida os links de recuperação pendentes, como o `reset-password`. Senha atual errada dá `400` com o código `INVALID_CURRENT_PASSWORD`, e a nova igual à atual dá `400`. O e-mail não muda por essas rotas (só pela plataforma, em `PATCH /users/:id`). Trocar a senha não encerra as outras sessões: o token já emitido vale até expirar (`JWT_EXPIRES_IN`, padrão 1 dia).
 
@@ -276,6 +276,21 @@ Remover um membro (`DELETE /members/:id`) desvincula o funcionário ligado a ele
 * O `logo` das respostas (empresa e `companies` do login e do `/auth/me`) é a chave da imagem no armazenamento (`<empresa>/logo-<uuid>.png`), ou `null`. A tela usa esse valor para saber se há logo e como versão da URL: `GET /companies/:id/logo?v=<logo>`.
 * O `PATCH /companies/current` e o `PATCH /companies/:id` não aceitam mais `logo`. Antes gravavam qualquer texto, o que, com a rota pública, deixaria apontar a logo para um arquivo de outra empresa.
 
+### Membros sem convite
+
+* `POST /members` (com `members.create`) põe a pessoa na empresa na hora, sem e-mail: `email`\*, `roleIds` e, para conta nova, `name` e `password`. Responde 201 com `{ member, accountCreated }`, em que `member` tem o formato de `GET /members/:id`.
+* Se o e-mail já tem conta, ela entra com a senha que já usa, e `name` e `password` são ignorados (`accountCreated: false`). Se não tem, a conta é criada com o nome e a senha informados, que quem adicionou passa para a pessoa; sem um dos dois, 400 `ACCOUNT_DETAILS_REQUIRED`. Conta inativa na plataforma dá 400, e quem já é membro dá 409 `ALREADY_MEMBER` ("Este usuário já faz parte da empresa.").
+* Quem foi removido da empresa volta com os cargos informados, como no aceite do convite. O convite pendente para o mesmo e-mail na empresa é revogado na mesma transação.
+* Os cargos seguem a regra de alcance dos convites: só os que têm permissões que quem adiciona também tem.
+* A migration `20261121120000_add_member_create_permission` criou `members.create` e deu a permissão a todo cargo que tinha `invitations.create`.
+* As regras ficam no `MemberAccessBuilder` (`modules/member/application/services/`), que monta o membro e a conta nova sem gravar, e a gravação no `saveMemberAccess` (`modules/member/infrastructure/prisma/`), que recebe a transação de quem chama. O `POST /members` e o acesso pelo funcionário (abaixo) usam os dois.
+
+### Acesso pelo funcionário
+
+* `POST /persons` (no `employee`), `POST /employees` e `PATCH /employees/:id` aceitam `access` (`{ password, roleIds }`, os dois obrigatórios, com pelo menos um cargo, para não criar acesso sem senha nem permissões) para a pessoa já entrar no sistema na empresa do token: o membro é criado com o nome e o e-mail da pessoa e fica ligado ao funcionário (`userCompanyId`), na mesma transação da pessoa e do funcionário. Se algo for recusado, nada é gravado.
+* Valem as regras do `POST /members`: exige `members.create` (403 sem ela), conta existente entra com a senha que já usa (a `password` é ignorada), e-mail de quem já é membro dá 409 `ALREADY_MEMBER` (o vínculo com um membro existente continua pelo `userCompanyId`), conta inativa dá 400 e os cargos seguem a regra de alcance.
+* Pessoa sem e-mail dá 400 `ACCESS_EMAIL_REQUIRED`. Mandar `access` junto com um `userCompanyId` dá 400.
+
 ### Convites
 
 * O e-mail do convite leva para `INVITATION_ACCEPT_URL` (padrão `http://localhost:3000/auth/accept-invitation`) com `?token=`. O token só existe no e-mail: a API guarda o hash.
@@ -303,6 +318,9 @@ Todo erro responde `{ "error": { "code", "message", "details"? } }`. A `message`
 | 400 | `INSUFFICIENT_BALANCE` | A carteira não tem saldo para o valor da ação comercial ou do desconto num ajuste ("Saldo insuficiente na carteira."): a tela mostra no campo Valor |
 | 400 | `INVALID_COMPANY_LOGO` | A logo enviada (na criação da empresa ou em `PUT /companies/current/logo`) está vazia ou não é PNG, JPG nem WEBP: a tela mostra no alerta do formulário, não no campo do e-mail do dono |
 | 400 | `INVALID_CURRENT_PASSWORD` | A senha da própria conta, pedida para confirmar uma ação, está errada: na troca de senha em Minha conta ("A senha atual está incorreta.") e ao inativar a empresa ("A senha está incorreta."). A tela mostra no campo da senha |
+| 400 | `ACCOUNT_DETAILS_REQUIRED` | `POST /members` com um e-mail que ainda não tem conta e sem `name` ou `password`: a tela marca os campos que faltam |
+| 400 | `ACCESS_EMAIL_REQUIRED` | `access` do funcionário para uma pessoa sem e-mail: a tela marca o e-mail da pessoa |
+| 409 | `ALREADY_MEMBER` | `POST /members` ou o `access` do funcionário com o e-mail de quem já é membro da empresa: a tela mostra no campo do e-mail ou do membro |
 | 401 | `UNAUTHORIZED` | Credenciais erradas, token ausente, inválido ou expirado, usuário inativo, acesso à empresa removido ou empresa inativa |
 | 403 | `FORBIDDEN` | Sem permissão para a ação (ex.: inativar a empresa sem ser o dono) |
 | 404 | `RESOURCE_NOT_FOUND` | Registro inexistente (ou de outra empresa) |
