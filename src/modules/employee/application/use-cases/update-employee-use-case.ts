@@ -12,6 +12,7 @@ import {
   EmployeeRepository,
 } from "../../domain/repositories/employee-repository";
 import { UpdateEmployeeDto } from "../dtos/update-employee-dto";
+import { EmployeeAccessPreparer } from "../services/employee-access-preparer";
 import { EmployeeMemberValidator } from "../services/employee-member-validator";
 
 @injectable()
@@ -22,6 +23,7 @@ export class UpdateEmployeeUseCase {
     @inject(PERSON_REPOSITORY)
     private readonly personRepository: PersonRepository,
     private readonly employeeMemberValidator: EmployeeMemberValidator,
+    private readonly employeeAccessPreparer: EmployeeAccessPreparer,
   ) {}
 
   async execute(
@@ -35,7 +37,8 @@ export class UpdateEmployeeUseCase {
       throw new ResourceNotFoundError("Funcionário não encontrado.");
     }
 
-    employee.update({ ...input, updatedById: context.userId });
+    const { access: accessInput, ...employeeInput } = input;
+    employee.update({ ...employeeInput, updatedById: context.userId });
 
     if (input.personId !== undefined) {
       if (!(await this.personRepository.findById(employee.personId, context.companyId))) {
@@ -60,7 +63,23 @@ export class UpdateEmployeeUseCase {
       );
     }
 
-    const updatedEmployee = await this.employeeRepository.update(employee);
+    const person = accessInput
+      ? await this.personRepository.findById(employee.personId, context.companyId)
+      : null;
+
+    if (accessInput && !person) {
+      throw new ResourceNotFoundError("Pessoa não encontrada.");
+    }
+
+    const access = person
+      ? await this.employeeAccessPreparer.prepare(person.toObject(), input, context)
+      : null;
+
+    if (access) {
+      employee.update({ userCompanyId: access.member.id, updatedById: context.userId });
+    }
+
+    const updatedEmployee = await this.employeeRepository.update(employee, access);
 
     return updatedEmployee.toObject();
   }

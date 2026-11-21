@@ -13,6 +13,7 @@ export function memberRouter(): Router {
 
   router.use(ensureAuthenticated, ensureTenant);
 
+  router.post("/", ensurePermission(PERMISSIONS.MEMBERS_CREATE), controller.create);
   router.get("/", ensurePermission(PERMISSIONS.MEMBERS_READ), controller.list);
   router.get("/:id", ensurePermission(PERMISSIONS.MEMBERS_READ), controller.getById);
   router.patch("/:id", ensurePermission(PERMISSIONS.MEMBERS_UPDATE), controller.update);

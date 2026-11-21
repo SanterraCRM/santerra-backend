@@ -12,6 +12,7 @@ import {
   EmployeeRepository,
 } from "../../domain/repositories/employee-repository";
 import { CreateEmployeeDto } from "../dtos/create-employee-dto";
+import { EmployeeAccessPreparer } from "../services/employee-access-preparer";
 import { EmployeeMemberValidator } from "../services/employee-member-validator";
 
 @injectable()
@@ -22,34 +23,39 @@ export class CreateEmployeeUseCase {
     @inject(PERSON_REPOSITORY)
     private readonly personRepository: PersonRepository,
     private readonly employeeMemberValidator: EmployeeMemberValidator,
+    private readonly employeeAccessPreparer: EmployeeAccessPreparer,
   ) {}
 
   async execute(
     input: CreateEmployeeDto,
     context: TenantContext,
   ): Promise<EmployeeProps> {
-    const employee = Employee.create({
-      ...input,
-      companyId: context.companyId,
-      createdById: context.userId,
-    });
+    const { access: _access, ...employeeInput } = input;
+    const person = await this.personRepository.findById(input.personId, context.companyId);
 
-    if (!(await this.personRepository.findById(employee.personId, context.companyId))) {
+    if (!person) {
       throw new ResourceNotFoundError("Pessoa não encontrada.");
     }
 
-    if (await this.employeeRepository.findByPersonId(employee.personId, context.companyId)) {
+    if (await this.employeeRepository.findByPersonId(person.id, context.companyId)) {
       throw new ConflictError("Esta pessoa já está cadastrada como funcionário.");
     }
 
-    if (employee.userCompanyId) {
+    if (employeeInput.userCompanyId) {
       await this.employeeMemberValidator.ensureAvailable(
-        employee.userCompanyId,
+        employeeInput.userCompanyId,
         context.companyId,
       );
     }
 
-    const createdEmployee = await this.employeeRepository.create(employee);
+    const access = await this.employeeAccessPreparer.prepare(person.toObject(), input, context);
+    const employee = Employee.create({
+      ...employeeInput,
+      userCompanyId: access?.member.id ?? employeeInput.userCompanyId,
+      companyId: context.companyId,
+      createdById: context.userId,
+    });
+    const createdEmployee = await this.employeeRepository.create(employee, access);
 
     return createdEmployee.toObject();
   }
