@@ -1,3 +1,5 @@
+import { ListSort } from "../../../../shared/domain/list-sort";
+import { User } from "../../../user";
 import { Member } from "../entities/member";
 
 export const MEMBER_REPOSITORY = "MemberRepository";
@@ -10,6 +12,7 @@ export interface FindMembersParams {
   active?: boolean;
   roleId?: string;
   hasWallet?: boolean;
+  sort?: ListSort;
   includeDeleted: boolean;
 }
 
@@ -33,7 +36,14 @@ export interface FindMembersResult {
   total: number;
 }
 
+export interface MemberAccess {
+  member: Member;
+  newUser: User | null;
+  addedById: string;
+}
+
 export interface MemberRepository {
+  add(access: MemberAccess): Promise<MemberDetails>;
   findById(
     id: string,
     companyId: string,

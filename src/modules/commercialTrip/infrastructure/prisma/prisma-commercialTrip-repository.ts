@@ -15,7 +15,10 @@ import {
   commercialTripDetailsInclude,
   commercialTripInclude,
   PrismaCommercialTripMapper,
+  ProductNames,
 } from "./prisma-commercialTrip-mapper";
+
+type RecommendationRows = { recommendations: { productId: number }[] }[];
 
 @injectable()
 export class PrismaCommercialTripRepository implements CommercialTripRepository {
@@ -40,7 +43,7 @@ export class PrismaCommercialTripRepository implements CommercialTripRepository 
       });
     });
 
-    return PrismaCommercialTripMapper.toDetails(createdCommercialTrip);
+    return this.toDetails(createdCommercialTrip);
   }
 
   async findById(
@@ -66,7 +69,7 @@ export class PrismaCommercialTripRepository implements CommercialTripRepository 
       include: commercialTripDetailsInclude,
     });
 
-    return commercialTrip ? PrismaCommercialTripMapper.toDetails(commercialTrip) : null;
+    return commercialTrip ? this.toDetails(commercialTrip) : null;
   }
 
   async findMany(params: FindCommercialTripsParams): Promise<FindCommercialTripsResult> {
@@ -97,8 +100,12 @@ export class PrismaCommercialTripRepository implements CommercialTripRepository 
       this.prisma.commercialTrip.count({ where }),
     ]);
 
+    const productNames = await this.findProductNames(commercialTrips);
+
     return {
-      commercialTrips: commercialTrips.map(PrismaCommercialTripMapper.toDetails),
+      commercialTrips: commercialTrips.map((commercialTrip) =>
+        PrismaCommercialTripMapper.toDetails(commercialTrip, productNames),
+      ),
       total,
     };
   }
@@ -130,7 +137,7 @@ export class PrismaCommercialTripRepository implements CommercialTripRepository 
       });
     });
 
-    return PrismaCommercialTripMapper.toDetails(updatedCommercialTrip);
+    return this.toDetails(updatedCommercialTrip);
   }
 
   async delete(commercialTrip: CommercialTrip): Promise<void> {
@@ -147,6 +154,40 @@ export class PrismaCommercialTripRepository implements CommercialTripRepository 
         deletedById: data.deletedById,
       },
     });
+  }
+
+  private async toDetails(
+    commercialTrip: Parameters<typeof PrismaCommercialTripMapper.toDetails>[0],
+  ): Promise<CommercialTripDetails> {
+    const productNames = await this.findProductNames([commercialTrip]);
+
+    return PrismaCommercialTripMapper.toDetails(commercialTrip, productNames);
+  }
+
+  // Produtos recomendados não têm FK: os nomes vêm da view do ERP pelo código (cd_prod).
+  private async findProductNames(commercialTrips: RecommendationRows): Promise<ProductNames> {
+    const ids = [
+      ...new Set(
+        commercialTrips.flatMap(({ recommendations }) =>
+          recommendations.map(({ productId }) => productId),
+        ),
+      ),
+    ];
+
+    if (ids.length === 0) {
+      return new Map();
+    }
+
+    const products = await this.prisma.productsView.findMany({
+      where: { id: { in: ids } },
+      select: { id: true, product: true },
+    });
+
+    return new Map(
+      products.flatMap(({ id, product }) =>
+        id === null || !product ? [] : [[id, product] as const],
+      ),
+    );
   }
 
   private async replaceLinks(

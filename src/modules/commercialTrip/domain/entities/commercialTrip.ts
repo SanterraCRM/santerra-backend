@@ -16,7 +16,7 @@ export interface CommercialTripProps {
   companyId: string
   participantIds: string[];
   harvestIds: string[];
-  recommendedProductIds: string[];
+  recommendedProductIds: number[];
   fileIds: string[];
   createdAt: Date;
   updatedAt: Date;
@@ -38,7 +38,7 @@ interface CreateCommercialTripProps {
   companyId: string
   participantIds?: string[];
   harvestIds?: string[];
-  recommendedProductIds?: string[];
+  recommendedProductIds?: number[];
   fileIds?: string[];
   createdById?: string | null;
 }
@@ -54,7 +54,7 @@ export interface UpdateCommercialTripProps {
   responsibleId?: string,
   participantIds?: string[];
   harvestIds?: string[];
-  recommendedProductIds?: string[];
+  recommendedProductIds?: number[];
   fileIds?: string[];
   updatedById?: string | null;
 }
@@ -124,7 +124,7 @@ export class CommercialTrip {
     return [...this.props.harvestIds];
   }
 
-  get recommendedProductIds(): string[] {
+  get recommendedProductIds(): number[] {
     return [...this.props.recommendedProductIds];
   }
 
@@ -212,7 +212,7 @@ export class CommercialTrip {
     };
   }
 
-  private static normalizeIds(ids: string[]): string[] {
+  private static normalizeIds<T extends string | number>(ids: T[]): T[] {
     return [...new Set(ids)];
   }
 

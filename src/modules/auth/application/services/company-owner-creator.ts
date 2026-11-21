@@ -1,6 +1,11 @@
+import { randomUUID } from "node:crypto";
 import { inject, injectable } from "tsyringe";
 
-import { Company } from "../../../company";
+import {
+  STORAGE_PROVIDER,
+  StorageProvider,
+} from "../../../../shared/application/storage/storage-provider";
+import { Company, prepareCompanyLogo } from "../../../company";
 import { Member } from "../../../member";
 import { PERMISSION_REPOSITORY, PermissionRepository } from "../../../permission";
 import { Role } from "../../../role";
@@ -18,6 +23,7 @@ interface CreateCompanyWithOwnerInput {
   owner: User;
   companyName: string;
   companyDescription?: string | null;
+  companyLogo?: Buffer;
   newUser?: User;
   emailVerification?: EmailVerification;
   createdById?: string;
@@ -30,21 +36,30 @@ export class CompanyOwnerCreator {
     private readonly authRepository: AuthRepository,
     @inject(PERMISSION_REPOSITORY)
     private readonly permissionRepository: PermissionRepository,
+    @inject(STORAGE_PROVIDER)
+    private readonly storageProvider: StorageProvider,
   ) {}
 
   async create({
     owner,
     companyName,
     companyDescription,
+    companyLogo,
     newUser,
     emailVerification,
     createdById = owner.id,
   }: CreateCompanyWithOwnerInput): Promise<Company> {
-    const company = Company.create({
-      name: companyName,
-      description: companyDescription,
-      createdById,
-    });
+    const companyId = randomUUID();
+    const logo = companyLogo ? prepareCompanyLogo(companyId, companyLogo) : null;
+    const company = Company.create(
+      {
+        name: companyName,
+        description: companyDescription,
+        logo: logo?.key ?? null,
+        createdById,
+      },
+      companyId,
+    );
     const permissions = await this.permissionRepository.findAll();
     const ownerRole = Role.create({
       name: OWNER_ROLE_NAME,
@@ -63,13 +78,25 @@ export class CompanyOwnerCreator {
       createdById,
     });
 
-    await this.authRepository.createCompanyWithOwner({
-      user: newUser,
-      company,
-      ownerRole,
-      owner: ownerMember,
-      emailVerification,
-    });
+    if (logo) {
+      await this.storageProvider.save(logo.key, logo.content);
+    }
+
+    try {
+      await this.authRepository.createCompanyWithOwner({
+        user: newUser,
+        company,
+        ownerRole,
+        owner: ownerMember,
+        emailVerification,
+      });
+    } catch (error) {
+      if (logo) {
+        await this.storageProvider.delete(logo.key).catch(() => undefined);
+      }
+
+      throw error;
+    }
 
     return company;
   }

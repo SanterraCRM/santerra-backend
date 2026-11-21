@@ -7,6 +7,8 @@ export const createCompanySchema = z.object({
   description: z.string().nullish(),
 });
 
+export const CREATE_COMPANY_FORM_FIELDS = Object.keys(createCompanySchema.shape).length;
+
 export const signUpSchema = z.object({
   name: z.string(),
   email: z.email(),

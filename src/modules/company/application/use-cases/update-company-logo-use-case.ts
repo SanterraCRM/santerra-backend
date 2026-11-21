@@ -5,15 +5,8 @@ import {
   STORAGE_PROVIDER,
   StorageProvider,
 } from "../../../../shared/application/storage/storage-provider";
-import {
-  ResourceNotFoundError,
-  ValidationError,
-} from "../../../../shared/errors/app-error";
-import {
-  createCompanyLogoKey,
-  detectCompanyLogoFormat,
-  isCompanyLogoKey,
-} from "../../domain/company-logo";
+import { ResourceNotFoundError } from "../../../../shared/errors/app-error";
+import { isCompanyLogoKey, prepareCompanyLogo } from "../../domain/company-logo";
 import { Company, CompanyProps } from "../../domain/entities/company";
 import {
   COMPANY_REPOSITORY,
@@ -40,21 +33,11 @@ export class UpdateCompanyLogoUseCase {
       throw new ResourceNotFoundError("Empresa não encontrada.");
     }
 
-    if (input.content.length === 0) {
-      throw new ValidationError("O arquivo enviado está vazio.");
-    }
-
-    const format = detectCompanyLogoFormat(input.content);
-
-    if (!format) {
-      throw new ValidationError("Envie a logo em PNG, JPG ou WEBP.");
-    }
-
+    const { key: logo, content } = prepareCompanyLogo(company.id, input.content);
     const previousLogo = company.logo;
-    const logo = createCompanyLogoKey(company.id, format);
     let updatedCompany: Company;
 
-    await this.storageProvider.save(logo, input.content);
+    await this.storageProvider.save(logo, content);
 
     try {
       company.update({ logo, updatedById: context.userId });

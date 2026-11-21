@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
   createdAtRangeQuerySchema,
   listQuerySchema,
+  sortQuerySchema,
 } from "../../../../shared/http/request-schemas";
 import { MANUFACTURER_OPTIONAL_FIELDS } from "../../domain/repositories/manufacturer-repository";
 
@@ -21,6 +22,7 @@ export const updateManufacturerSchema = createManufacturerSchema
 
 export const listManufacturersQuerySchema = listQuerySchema.extend({
   ...createdAtRangeQuerySchema.shape,
+  ...sortQuerySchema.shape,
   missing: z
     .string()
     .transform((value) => value.split(","))

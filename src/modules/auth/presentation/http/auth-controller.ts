@@ -128,7 +128,7 @@ export class AuthController {
 
   createCompany: RequestHandler = async (request, response) => {
     const company = await this.createCompanyUseCase.execute(
-      createCompanySchema.parse(request.body),
+      { ...createCompanySchema.parse(request.body), logo: request.file?.buffer },
       getAuthContext(request),
     );
 

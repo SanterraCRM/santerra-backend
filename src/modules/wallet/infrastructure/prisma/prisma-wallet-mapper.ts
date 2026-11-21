@@ -1,7 +1,11 @@
 import { Prisma, Wallet as PrismaWallet } from "@prisma/client";
 
 import { Wallet } from "../../domain/entities/wallet";
-import { WalletDetails, WalletListItem } from "../../domain/repositories/wallet-repository";
+import {
+  WalletDetails,
+  WalletListItem,
+  WalletMovementDetails,
+} from "../../domain/repositories/wallet-repository";
 
 export const ACTIVE_ACTIONS = { deletedAt: null };
 
@@ -14,8 +18,23 @@ export const walletListInclude = {
   _count: { select: { commercialActions: { where: ACTIVE_ACTIONS } } },
 } satisfies Prisma.WalletInclude;
 
+export const walletMovementInclude = {
+  createdBy: { select: { id: true, name: true } },
+  commercialAction: {
+    select: {
+      id: true,
+      description: true,
+      deletedAt: true,
+      event: { select: { id: true, name: true } },
+    },
+  },
+} satisfies Prisma.WalletMovementInclude;
+
 type PrismaWalletDetails = Prisma.WalletGetPayload<{ include: typeof walletDetailsInclude }>;
 type PrismaWalletListItem = Prisma.WalletGetPayload<{ include: typeof walletListInclude }>;
+type PrismaWalletMovement = Prisma.WalletMovementGetPayload<{
+  include: typeof walletMovementInclude;
+}>;
 
 export class PrismaWalletMapper {
   static toDomain(raw: PrismaWallet): Wallet {
@@ -42,5 +61,29 @@ export class PrismaWalletMapper {
 
   static toListItem({ _count, ...raw }: PrismaWalletListItem): WalletListItem {
     return { ...PrismaWalletMapper.toDetails(raw), actionsCount: _count.commercialActions };
+  }
+
+  static toMovementDetails({
+    createdBy,
+    commercialAction,
+    ...raw
+  }: PrismaWalletMovement): WalletMovementDetails {
+    return {
+      movement: {
+        id: raw.id,
+        sequence: raw.sequence,
+        walletId: raw.walletId,
+        companyId: raw.companyId,
+        type: raw.type,
+        amount: raw.amount.toNumber(),
+        balanceAfter: raw.balanceAfter.toNumber(),
+        reason: raw.reason,
+        commercialActionId: raw.commercialActionId,
+        createdAt: raw.createdAt,
+        createdById: raw.createdById,
+      },
+      createdBy,
+      commercialAction,
+    };
   }
 }

@@ -3,6 +3,7 @@ import { injectable } from "tsyringe";
 
 import { CommercialUsage } from "../../../../shared/domain/commercial-usage";
 import { countCommercialUsage } from "../../../../shared/infrastructure/database/count-commercial-usage";
+import { saveMemberAccess } from "../../../member";
 import { Person } from "../../domain/entities/person";
 import {
   PersonRepository,
@@ -28,6 +29,10 @@ export class PrismaPersonRepository implements PersonRepository {
   async create(person: Person, links: PersonLinks = {}): Promise<PersonDetails> {
     const createdPerson = await this.prisma.$transaction(async (transaction) => {
       await transaction.person.create({ data: person.toObject() });
+
+      if (links.memberAccess) {
+        await saveMemberAccess(transaction, links.memberAccess);
+      }
 
       if (links.employee) {
         await transaction.employee.create({ data: links.employee.toObject() });

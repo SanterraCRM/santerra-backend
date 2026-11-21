@@ -137,7 +137,7 @@ Cargos e permissões, definidos em `prisma/seeds/main/roles.ts`. O Administrador
 | `wallets` | — | read, create, update, delete |
 | `files` | read, create | read, create, update |
 
-`company`, `roles`, `invitations` e os `delete` que não aparecem na tabela ficam só com o Administrador.
+`company`, `roles`, `invitations`, o `members.create` e os `delete` que não aparecem na tabela ficam só com o Administrador.
 
 Para testar a seed: `yarn test:seed:main` cria um banco temporário no servidor do `DATABASE_URL` (o usuário do banco precisa poder criar bancos), aplica as migrations, roda a seed nos cenários (proteções, `--dry-run`, primeira e segunda execução, falha na verificação, permissão faltando) e apaga o banco no final. O banco do `DATABASE_URL` não é alterado.
 
@@ -146,10 +146,10 @@ Para testar a seed: `yarn test:seed:main` cria um banco temporário no servidor 
 Um usuário é uma conta global e pode participar de várias empresas, com cargos diferentes em cada uma.
 
 1. O cadastro confirma o e-mail antes de criar a conta. `POST /auth/sign-up/verification-code` com `email` envia um código de 6 dígitos válido por 15 minutos (`409` se o e-mail já tiver conta, `429` se pedir de novo em menos de 60 segundos). `POST /auth/sign-up/verify-email` com `email` e `code` devolve um `verificationToken`; são 5 tentativas por código, e vale só o código mais recente. Depois, `POST /auth/sign-up` com `name`, `email`, `password`, `companyName` e o `verificationToken` (válido por 60 minutos e de uso único; se expirar, a resposta é `400` com o código `EMAIL_NOT_VERIFIED`) cria a conta e a empresa, com quem cadastrou como **dono**, e já devolve o token com a empresa escolhida. O dono tem todas as permissões e não pode ser alterado nem removido. Também é criado um cargo "Administrador" para convidar outros administradores.
-2. `POST /auth/login` devolve um token sem empresa e a lista `companies`.
-3. `POST /auth/select-company` (com o token do login) devolve um token com a empresa escolhida. Também serve para trocar de empresa.
+2. `POST /auth/login` devolve um token sem empresa e a lista `companies`, só com as empresas ativas.
+3. `POST /auth/select-company` (com o token do login) devolve um token com a empresa escolhida. Também serve para trocar de empresa. Empresa inativa ou excluída dá 403.
 4. As rotas da empresa (`/persons`, `/products`, `/wallets`, `/files`, `/roles`, `/members`, `/invitations`, `/companies/current`) usam o token com empresa no header `Authorization: Bearer <token>`, e cada ação exige a permissão correspondente nos cargos do usuário.
-5. Novos funcionários entram por convite: `POST /invitations` envia o link por e-mail e `POST /invitations/accept` aceita. Se o e-mail ainda não tiver conta, ela é criada com `name` e `password`; se já tiver, é preciso informar a senha dela.
+5. Novos funcionários entram por convite: `POST /invitations` envia o link por e-mail e `POST /invitations/accept` aceita. Se o e-mail ainda não tiver conta, ela é criada com `name` e `password`; se já tiver, é preciso informar a senha dela. Também podem ser adicionados direto, sem convite, com `POST /members` (ver "Membros sem convite").
 6. Recuperação de senha: `POST /auth/forgot-password` com `email` envia um link válido por 60 minutos (`PASSWORD_RESET_URL?token=...`) e sempre responde `204`, exista a conta ou não, para não revelar quais e-mails estão cadastrados. `POST /auth/reset-password` com `token` e `password` troca a senha e invalida os outros links pendentes do usuário.
 7. Minha conta: com qualquer token, com ou sem empresa, `PATCH /auth/me` com `name` muda o nome do próprio usuário e devolve o usuário, e `PATCH /auth/me/password` com `currentPassword` e `newPassword` troca a senha (`204`) e invalida os links de recuperação pendentes, como o `reset-password`. Senha atual errada dá `400` com o código `INVALID_CURRENT_PASSWORD`, e a nova igual à atual dá `400`. O e-mail não muda por essas rotas (só pela plataforma, em `PATCH /users/:id`). Trocar a senha não encerra as outras sessões: o token já emitido vale até expirar (`JWT_EXPIRES_IN`, padrão 1 dia).
 
@@ -175,6 +175,8 @@ Usuários do seed (senha `Senha@123`):
 As rotas de lista aceitam `page`, `limit` (padrão 20, máximo 100), `search` e `includeDeleted`, e respondem `{ data, meta: { page, limit, total, totalPages } }`.
 
 O filtro "Data de cadastro" usa `createdFrom` e `createdTo` em ISO com fuso (ex.: `2026-11-05T00:00:00-03:00`): quem chama decide onde o dia começa, e data sem fuso é recusada com `400`. No schema da lista, entra com `...createdAtRangeQuerySchema.shape`; outros períodos usam o `dateTimeQuerySchema`. Os dois ficam em `src/shared/http/request-schemas.ts`.
+
+A ordem padrão é a do cadastro, do mais recente para o mais antigo. As listas que alimentam os selects com busca no servidor aceitam `sort=name`, para virem em ordem alfabética: `/events`, `/manufacturers` (pelo nome), `/members` e `/wallets` (pelo nome do membro). O desempate é pelo `id`, para a paginação não repetir nem pular registro quando dois nomes são iguais, e a ordem segue o collation do banco (`Portuguese_Brazil`: "Água" vem com o "A"). Outro valor de `sort` dá `400`. No schema da lista, entra com `...sortQuerySchema.shape`; o repositório troca o `orderBy` quando `params.sort === "name"`. A busca (`search`) usa `contains` com `mode: "insensitive"`: ignora maiúsculas, mas não acentos ("avila" não acha "Ávila").
 
 ### Nomes das relações
 
@@ -226,25 +228,32 @@ Remover um membro (`DELETE /members/:id`) desvincula o funcionário ligado a ele
 
 ### Painel (`GET /dashboard/summary`)
 
-* Um resumo para a página inicial, com `ensureTenant` e sem permissão própria: cada bloco só vem com a permissão de ler o módulo dele, senão vem `null`. `producers` (`producers.read`): `total` e `byPotential` (`[{ id, name, count }]`, todos os potenciais, os mais cheios primeiro). `trips` (`commercial-trips.read`): `byStatus` e `upcoming` (as 5 próximas visitas pendentes ou em andamento a partir de hoje, com produtor e responsável). `actions` (`commercial-actions.read`): `month` (AAAA-MM), `monthTotal` e `byEvent` (soma do valor das ações com início no mês, por evento) e `recent` (as 5 últimas ações cadastradas). `wallets` (`wallets.read`): `count` e `totalBalance`.
+* Um resumo para a página inicial, com `ensureTenant` e sem permissão própria: cada bloco só vem com a permissão de ler o módulo dele, senão vem `null`. `producers` (`producers.read`): `total` e `byPotential` (`[{ id, name, count }]`, todos os potenciais, os mais cheios primeiro). `trips` (`commercial-trips.read`): `byStatus` e `upcoming` (as 5 próximas visitas pendentes ou em andamento a partir de hoje, com produtor e responsável). `actions` (`commercial-actions.read`): `month` (AAAA-MM), `monthTotal` e `byEvent` (soma do valor das ações com início no mês, por tipo de evento) e `recent` (as 5 últimas ações cadastradas). `wallets` (`wallets.read`): `count` e `totalBalance`.
 * "Hoje" e "o mês" são de São Paulo. Os números usam os mesmos filtros das listas (`?status=`, `?potentialId=`, `?eventId=` com `initialFrom`/`initialTo`), então batem com elas; ação sem data de início não entra no gasto do mês.
 
 ### Ações comerciais
 
 * Todas as respostas trazem `event`, `responsible` e `wallet` (`{ id, name }`; na carteira, `name` é o nome do membro dono), `producerGuests`, `resellerGuests` e `participants` (`[{ id, name }]`, em ordem alfabética) e `files` (só com `files.read`; senão `null`), além dos ids (`CommercialActionDetailsDto`).
-* A lista aceita `eventId`, `responsibleId`, `walletId` (o extrato da carteira) e `initialFrom`/`initialTo` (início da ação, com fuso), e busca na descrição e no nome do evento. A ordem é pelo início, do mais recente para o mais antigo (sem data no fim), e depois pelo cadastro.
-* **Saldo:** criar a ação debita o valor da carteira; mudar o valor ou a carteira devolve o valor antigo e debita o novo, na mesma transação; excluir devolve o valor. Sem saldo, 400 `INSUFFICIENT_BALANCE` e nada muda.
+* A lista aceita `eventId`, `responsibleId`, `walletId` (o extrato da carteira) e `initialFrom`/`initialTo` (início da ação, com fuso), e busca na descrição e no nome do tipo de evento. A ordem é pelo início, do mais recente para o mais antigo (sem data no fim), e depois pelo cadastro.
+* **Saldo:** criar a ação debita o valor da carteira; mudar o valor ou a carteira devolve o valor antigo e debita o novo, na mesma transação; excluir devolve o valor. Sem saldo, 400 `INSUFFICIENT_BALANCE` e nada muda. Cada débito e cada estorno viram uma movimentação no extrato da carteira (ver "Carteiras").
 * Tirar anexo segue a D7, como no produto e na visita.
-* Eventos: o nome é único por empresa (D12, seguindo a recomendação): 409 `CONFLICT` ("Já existe um evento com este nome."), para dois eventos não ficarem iguais no select da ação.
+* Tipos de evento: o módulo `events` aparece como "Tipos de evento" nas telas e nas mensagens (D22, decisão do usuário: só o texto; a rota `/events`, as permissões `events.*` e o modelo `Event` continuam). O tipo é a categoria (dia de campo, feira), e a ocorrência, com data e valor, é a ação comercial, então o nome não leva o ano. A migration `20261114120000_rename_event_permission_descriptions` trocou as descrições das quatro permissões ("Visualizar tipos de evento." etc.), só onde ainda estava o texto antigo.
+* O nome do tipo de evento é único por empresa (D12, seguindo a recomendação): 409 `CONFLICT` ("Já existe um tipo de evento com este nome."), para dois tipos não ficarem iguais no select da ação.
 
 ### Carteiras
 
 * Todas as respostas de `/wallets` trazem `member: { id, name, email }` (`WalletDetailsDto`); a lista traz também `actionsCount` (as ações comerciais não excluídas da carteira), o mesmo número do 409 da exclusão.
 * **Uma carteira por membro** (D4, seguindo a recomendação): criar a segunda, ou trocar o membro para um que já tem carteira, dá 409 `CONFLICT` ("Este membro já tem uma carteira."). A regra fica na aplicação, sem índice único no banco, porque a carteira excluída (lógica) não pode impedir uma nova.
-* **O saldo (`value`) só muda por crédito e pelas ações.** `POST /wallets/:id/credits` (`{ amount }`, com `wallets.update`) soma o valor com incremento no banco, então créditos ao mesmo tempo somam todos; crédito zero ou negativo, ou que passaria do máximo da coluna, dá 400. As ações debitam e estornam do mesmo jeito. O `POST /wallets` aceita `value` como saldo inicial, e o `PATCH` não aceita mais `value` (antes gravava o saldo inteiro e podia apagar um débito feito no meio): só `userCompanyId`.
+* **Extrato (`WalletMovement`, D19).** Toda mudança de saldo grava uma movimentação na mesma transação:
+  * `INITIAL_BALANCE`: o saldo com que a carteira foi criada. A migration `20261112120000_add_wallet_movements` também grava o saldo de cada carteira que já existia, com o motivo "Saldo da carteira quando o extrato começou.";
+  * `ADJUSTMENT`: o ajuste manual, com motivo;
+  * `ACTION_DEBIT` e `ACTION_REFUND`: o débito e o estorno das ações comerciais, com o `commercialActionId`.
+
+  O `amount` vem com sinal (positivo entra, negativo sai), e o `balanceAfter` é o saldo logo depois. A soma das movimentações de uma carteira é sempre o `value`. A ordem é a do `sequence`, que desempata movimentações gravadas no mesmo instante (o estorno e o débito de uma mesma edição de ação). Só o `changeWalletBalance` (`modules/wallet/infrastructure/prisma/wallet-balance.ts`) escreve em `Wallet.value`: ele atualiza o saldo com a trava (sem ficar negativo nem passar do máximo, menos no estorno) e grava a movimentação. A criação da carteira grava o saldo inicial na mesma transação.
+* **Ajuste de saldo.** `POST /wallets/:id/adjustments` (`{ direction: "credit" | "debit", amount, reason }`, com `wallets.adjust`) acrescenta ou diminui o valor e devolve a carteira. O motivo é obrigatório (até 500 caracteres). Diminuir além do saldo dá 400 `INSUFFICIENT_BALANCE`; acrescentar além do máximo da coluna, ou valor zero ou negativo, dá 400. A migration deu `wallets.adjust` a todo cargo que tinha `wallets.update`, a permissão do antigo `POST /wallets/:id/credits` (removido). O `POST /wallets` continua aceitando `value` como saldo inicial, e o `PATCH` só aceita `userCompanyId`.
+* `GET /wallets/:id/movements` (com `wallets.read`) lista o extrato, do mais recente para o mais antigo, com `createdBy` (`{ id, name }`) e `commercialAction` (`{ id, description, deletedAt, event: { id, name } }`, também quando a ação já foi excluída, só com `commercial-actions.read`; senão `null`, e o `commercialActionId` continua). Filtros: `type`, `direction` (`credit` ou `debit`), `createdFrom`/`createdTo` e `search` (no motivo, na descrição da ação e no nome do tipo de evento). `GET /wallets/:id/movements/summary`, com os mesmos filtros, devolve `credits` e `debits` (as duas somas em positivo) e `count`.
 * A lista aceita `balance` (`empty`: zerada; `positive`: com saldo).
 * A exclusão é bloqueada enquanto houver ação comercial não excluída (409 `RESOURCE_IN_USE`, "Esta carteira está em uso por 2 ações comerciais.").
-* O extrato vem das ações comerciais (recomendação da D4): `GET /commercial-actions?walletId=`. Os créditos não ficam registrados um a um.
 * `GET /members` aceita `hasWallet` (`true`/`false`), para a tela oferecer só membros sem carteira. Remover um membro (`DELETE /members/:id`) é bloqueado quando a carteira dele tem ações (409 "A carteira deste membro está em uso por 1 ação comercial. Desative o membro em vez de removê-lo.") ou saldo (409 "A carteira deste membro ainda tem saldo. …"); a carteira zerada e sem ações é excluída junto com o membro. A regra fica no repositório de membros (`findWalletUsage`), sem importar o módulo de carteiras, que já importa o de membros.
 
 ### Metas (`/goals`)
@@ -260,25 +269,42 @@ Remover um membro (`DELETE /members/:id`) desvincula o funcionário ligado a ele
 ### Empresas
 
 * `POST /auth/companies` cria uma empresa para o usuário logado (`name`\* e `description`), com ou sem empresa no token (só `ensureAuthenticated`), e responde 201 com a empresa. Quem cria vira dono, com o cargo "Administrador" e todas as permissões.
+* **Logo na criação.** `POST /auth/companies` e `POST /companies` aceitam JSON, como antes, ou `multipart/form-data` com os mesmos campos e a logo opcional no campo `file`, com as regras de "Logo da empresa" (413 acima de 2 MB; 400 para outro formato ou arquivo vazio). A logo é conferida antes de criar qualquer coisa e gravada antes da transação; se a transação falhar, o arquivo sai do armazenamento. O cadastro (`POST /auth/sign-up`) não recebe logo.
 * A montagem de empresa, cargo "Administrador" e dono fica num serviço só, o `CompanyOwnerCreator` (`modules/auth/application/services/`), usado pelo cadastro (que manda também o usuário novo e a verificação de e-mail, tudo numa transação) e por essa rota.
 * O login de uma conta sem empresa responde 200 com `companies` vazio.
 * **Pela plataforma** (`POST /companies`, só o admin da plataforma): `name`\*, `description` e `ownerEmail`\*, o e-mail de um usuário que já existe e está ativo. A empresa nasce com ele como dono, pelo mesmo `CompanyOwnerCreator` (com `createdById` do admin). Sem usuário com o e-mail, 404 ("Nenhum usuário com este e-mail. Cadastre o usuário antes de criar a empresa."); usuário inativo, 400. Antes, a empresa nascia sem dono nem membro, e ninguém a acessava.
 * O módulo de empresa chama o serviço pela porta `PLATFORM_COMPANY_CREATOR` (`src/shared/application/companies/`), que o módulo de auth implementa e registra no container: o auth já importa o módulo de empresa, e o caminho inverso criaria importação circular.
-* `GET /companies` e `GET /companies/:id` (plataforma) trazem `owner` (`{ id, name, email }` ou `null`) e `membersCount` (membros não removidos).
+* `GET /companies` e `GET /companies/:id` (plataforma) trazem `owner` (`{ id, name, email }` ou `null`) e `membersCount` (membros não removidos). A lista aceita `active` (`true`/`false`).
+* **Empresa inativa (D20).** Toda resposta de empresa traz `active`. `POST /companies/current/deactivate` com `{ password }` inativa a empresa do token e responde 204. Só o dono inativa, com a própria senha: quem não é dono recebe 403 ("Só o dono da empresa pode inativá-la."), e a senha errada dá 400 `INVALID_CURRENT_PASSWORD` ("A senha está incorreta."). A empresa inativa some do login, do `/auth/me` e da troca de empresa, e o token de quem estava dentro dela passa a dar 401 na requisição seguinte, como o de um membro removido. Os convites dela dão 404, na prévia e no aceite. Os dados ficam como estavam, e só a plataforma reativa, com `PATCH /companies/:id` e `{ active: true }` (o mesmo `PATCH` também inativa, sem senha). O `PATCH /companies/current` não aceita `active`.
 * `GET /users` (plataforma) aceita `active` (`true`/`false`). O backend não impede o admin de desativar a própria conta; a tela impede.
 
 ### Logo da empresa
 
-* `PUT /companies/current/logo` (com `company.update`) recebe a imagem no campo `file` de um `multipart/form-data`: PNG, JPG ou WEBP, conferidos pelo conteúdo do arquivo (não pelo tipo informado), até 2 MB. Acima disso, 413; outro formato ou arquivo vazio, 400. Responde com a empresa. A logo nova substitui a anterior, que sai do armazenamento.
+* `PUT /companies/current/logo` (com `company.update`) recebe a imagem no campo `file` de um `multipart/form-data`: PNG, JPG ou WEBP, conferidos pelo conteúdo do arquivo (não pelo tipo informado), até 2 MB. Acima disso, 413; outro formato ou arquivo vazio, 400 `INVALID_COMPANY_LOGO`. Responde com a empresa. A logo nova substitui a anterior, que sai do armazenamento.
 * `DELETE /companies/current/logo` (com `company.update`) remove a logo e responde 204, também quando não havia logo.
 * `GET /companies/:id/logo` é **público**, sem token: `<img>` não manda o `Bearer`, e a escolha de empresa mostra empresas para as quais o token ainda não vale. Serve só a logo daquela empresa, com o `Content-Type` da imagem, `Content-Disposition: inline` e `X-Content-Type-Options: nosniff`. Com `?v=` igual ao `logo` atual, a resposta pode ficar um ano no cache (`immutable`); sem ele, ou com outro valor, `no-cache`. Empresa sem logo ou excluída dá 404.
 * O `logo` das respostas (empresa e `companies` do login e do `/auth/me`) é a chave da imagem no armazenamento (`<empresa>/logo-<uuid>.png`), ou `null`. A tela usa esse valor para saber se há logo e como versão da URL: `GET /companies/:id/logo?v=<logo>`.
 * O `PATCH /companies/current` e o `PATCH /companies/:id` não aceitam mais `logo`. Antes gravavam qualquer texto, o que, com a rota pública, deixaria apontar a logo para um arquivo de outra empresa.
 
+### Membros sem convite
+
+* `POST /members` (com `members.create`) põe a pessoa na empresa na hora, sem e-mail: `email`\*, `roleIds` e, para conta nova, `name` e `password`. Responde 201 com `{ member, accountCreated }`, em que `member` tem o formato de `GET /members/:id`.
+* Se o e-mail já tem conta, ela entra com a senha que já usa, e `name` e `password` são ignorados (`accountCreated: false`). Se não tem, a conta é criada com o nome e a senha informados, que quem adicionou passa para a pessoa; sem um dos dois, 400 `ACCOUNT_DETAILS_REQUIRED`. Conta inativa na plataforma dá 400, e quem já é membro dá 409 `ALREADY_MEMBER` ("Este usuário já faz parte da empresa.").
+* Quem foi removido da empresa volta com os cargos informados, como no aceite do convite. O convite pendente para o mesmo e-mail na empresa é revogado na mesma transação.
+* Os cargos seguem a regra de alcance dos convites: só os que têm permissões que quem adiciona também tem.
+* A migration `20261121120000_add_member_create_permission` criou `members.create` e deu a permissão a todo cargo que tinha `invitations.create`.
+* As regras ficam no `MemberAccessBuilder` (`modules/member/application/services/`), que monta o membro e a conta nova sem gravar, e a gravação no `saveMemberAccess` (`modules/member/infrastructure/prisma/`), que recebe a transação de quem chama. O `POST /members` e o acesso pelo funcionário (abaixo) usam os dois.
+
+### Acesso pelo funcionário
+
+* `POST /persons` (no `employee`), `POST /employees` e `PATCH /employees/:id` aceitam `access` (`{ password, roleIds }`, os dois obrigatórios, com pelo menos um cargo, para não criar acesso sem senha nem permissões) para a pessoa já entrar no sistema na empresa do token: o membro é criado com o nome e o e-mail da pessoa e fica ligado ao funcionário (`userCompanyId`), na mesma transação da pessoa e do funcionário. Se algo for recusado, nada é gravado.
+* Valem as regras do `POST /members`: exige `members.create` (403 sem ela), conta existente entra com a senha que já usa (a `password` é ignorada), e-mail de quem já é membro dá 409 `ALREADY_MEMBER` (o vínculo com um membro existente continua pelo `userCompanyId`), conta inativa dá 400 e os cargos seguem a regra de alcance.
+* Pessoa sem e-mail dá 400 `ACCESS_EMAIL_REQUIRED`. Mandar `access` junto com um `userCompanyId` dá 400.
+
 ### Convites
 
 * O e-mail do convite leva para `INVITATION_ACCEPT_URL` (padrão `http://localhost:3000/auth/accept-invitation`) com `?token=`. O token só existe no e-mail: a API guarda o hash.
-* `GET /invitations/preview?token=` é público e devolve `email`, `companyName`, `accountExists` (se já há conta com o e-mail), `status` (`pending`, `accepted` ou `expired`) e `expiresAt`, para a tela de aceite saber o que pedir. Token desconhecido, ou convite revogado ou trocado por um mais novo, dá 404.
+* `GET /invitations/preview?token=` é público e devolve `email`, `companyName`, `accountExists` (se já há conta com o e-mail), `status` (`pending`, `accepted` ou `expired`) e `expiresAt`, para a tela de aceite saber o que pedir. Token desconhecido, convite revogado ou trocado por um mais novo, ou empresa inativa, dá 404.
 * `GET /invitations` aceita `status` (`pending`, `accepted`, `expired`).
 * Convidar de novo um e-mail com convite pendente troca o convite (o antigo deixa de valer). O convite aceito não é revogado (409).
 
@@ -299,10 +325,14 @@ Todo erro responde `{ "error": { "code", "message", "details"? } }`. A `message`
 | 400 | `INVALID_JSON` | Corpo com JSON malformado |
 | 400 | `INVALID_REFERENCE` | Um dos IDs informados não existe |
 | 400 | `EMAIL_NOT_VERIFIED` | Cadastro com `verificationToken` inválido ou expirado |
-| 400 | `INSUFFICIENT_BALANCE` | A carteira não tem saldo para o valor da ação comercial ("Saldo insuficiente na carteira."): a tela mostra no campo Valor |
-| 400 | `INVALID_CURRENT_PASSWORD` | Troca de senha em Minha conta com a senha atual errada ("A senha atual está incorreta."): a tela mostra no campo Senha atual |
-| 401 | `UNAUTHORIZED` | Credenciais erradas, token ausente, inválido ou expirado, usuário inativo ou acesso à empresa removido |
-| 403 | `FORBIDDEN` | Sem permissão para a ação |
+| 400 | `INSUFFICIENT_BALANCE` | A carteira não tem saldo para o valor da ação comercial ou do desconto num ajuste ("Saldo insuficiente na carteira."): a tela mostra no campo Valor |
+| 400 | `INVALID_COMPANY_LOGO` | A logo enviada (na criação da empresa ou em `PUT /companies/current/logo`) está vazia ou não é PNG, JPG nem WEBP: a tela mostra no alerta do formulário, não no campo do e-mail do dono |
+| 400 | `INVALID_CURRENT_PASSWORD` | A senha da própria conta, pedida para confirmar uma ação, está errada: na troca de senha em Minha conta ("A senha atual está incorreta.") e ao inativar a empresa ("A senha está incorreta."). A tela mostra no campo da senha |
+| 400 | `ACCOUNT_DETAILS_REQUIRED` | `POST /members` com um e-mail que ainda não tem conta e sem `name` ou `password`: a tela marca os campos que faltam |
+| 400 | `ACCESS_EMAIL_REQUIRED` | `access` do funcionário para uma pessoa sem e-mail: a tela marca o e-mail da pessoa |
+| 409 | `ALREADY_MEMBER` | `POST /members` ou o `access` do funcionário com o e-mail de quem já é membro da empresa: a tela mostra no campo do e-mail ou do membro |
+| 401 | `UNAUTHORIZED` | Credenciais erradas, token ausente, inválido ou expirado, usuário inativo, acesso à empresa removido ou empresa inativa |
+| 403 | `FORBIDDEN` | Sem permissão para a ação (ex.: inativar a empresa sem ser o dono) |
 | 404 | `RESOURCE_NOT_FOUND` | Registro inexistente (ou de outra empresa) |
 | 409 | `CONFLICT` | Duplicidade, como "Já existe uma pessoa com este documento.": a tela mostra no campo |
 | 409 | `RESOURCE_IN_USE` | Exclusão bloqueada porque outro registro usa este, como "Este potencial está em uso por 3 produtores.": a tela mostra no diálogo de exclusão |

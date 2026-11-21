@@ -5,6 +5,7 @@ import {
   CommercialActionDetails,
   CommercialActionFile,
   CommercialActionRelation,
+  CommercialActionReseller,
 } from "../../domain/repositories/commercialAction-repository";
 
 export interface CommercialActionDetailsDto extends CommercialActionProps {
@@ -12,7 +13,7 @@ export interface CommercialActionDetailsDto extends CommercialActionProps {
   responsible: CommercialActionRelation;
   wallet: CommercialActionRelation;
   producerGuests: CommercialActionRelation[];
-  resellerGuests: CommercialActionRelation[];
+  resellerGuests: CommercialActionReseller[];
   participants: CommercialActionRelation[];
   files: CommercialActionFile[] | null;
 }

@@ -32,6 +32,7 @@ export class ListManufacturersUseCase {
       createdFrom: input.createdFrom,
       createdTo: input.createdTo,
       missing: input.missing,
+      sort: input.sort,
       includeDeleted: input.includeDeleted ?? false,
     });
 

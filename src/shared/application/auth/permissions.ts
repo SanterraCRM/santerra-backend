@@ -17,6 +17,7 @@ export const PERMISSIONS = {
   ROLES_DELETE: "roles.delete",
 
   MEMBERS_READ: "members.read",
+  MEMBERS_CREATE: "members.create",
   MEMBERS_UPDATE: "members.update",
   MEMBERS_DELETE: "members.delete",
 
@@ -28,6 +29,7 @@ export const PERMISSIONS = {
   WALLETS_CREATE: "wallets.create",
   WALLETS_UPDATE: "wallets.update",
   WALLETS_DELETE: "wallets.delete",
+  WALLETS_ADJUST: "wallets.adjust",
 
   FILES_READ: "files.read",
   FILES_CREATE: "files.create",

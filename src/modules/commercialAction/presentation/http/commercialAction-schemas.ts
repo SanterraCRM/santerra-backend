@@ -12,7 +12,7 @@ export const createCommercialActionSchema = z.object({
   responsibleId: z.uuid(),
   invoiceNumber: z.string().nullish(),
   producerGuestIds: z.array(z.uuid()).optional(),
-  resellerGuestIds: z.array(z.uuid()).optional(),
+  resellerGuestIds: z.array(z.coerce.number().int().positive()).optional(),
   participantIds: z.array(z.uuid()).optional(),
   fileIds: z.array(z.uuid()).optional(),
 });

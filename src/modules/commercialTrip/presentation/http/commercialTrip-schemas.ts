@@ -14,7 +14,7 @@ export const createCommercialTripSchema = z.object({
   responsibleId: z.uuid(),
   participantIds: z.array(z.uuid()).optional(),
   harvestIds: z.array(z.uuid()).optional(),
-  recommendedProductIds: z.array(z.uuid()).optional(),
+  recommendedProductIds: z.array(z.coerce.number().int().positive()).optional(),
   fileIds: z.array(z.uuid()).optional(),
 });
 

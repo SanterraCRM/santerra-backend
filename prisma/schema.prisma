@@ -1,16 +1,100 @@
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["views"]
 }
 
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+  schemas  = ["public", "erp_externo"]
+}
+
+view resellersView {
+  companyId        Int?      @map("cd_emp")
+  id               Int?      @unique @map("cd_clien")
+  isActive         Int?      @map("ativo")
+  name             String?   @map("nome")
+  fantasyName      String?   @map("nome_res")
+  legalType        String?   @map("tp_pes_desc")
+  document         String?   @map("cgc_cpf")
+  registrationType String?   @map("tp_insc_desc")
+  registration     String?   @map("inscricao")
+  activity         String?   @map("ramo")
+  creditStatus     String?   @map("st_cred_desc")
+  clientGroupCode  String?   @map("cd_grupocli")
+  clientGroup      String?   @map("grupo_cliente")
+  sellerCode       String?   @map("cd_vend")
+  areaCode         String?   @map("cd_area")
+  area             String?   @map("area")
+  createdAt        DateTime? @map("dt_cad")
+  lastBuyDate      DateTime? @map("dt_ult_compra")
+  lastBuyValue     Decimal?  @map("vl_ult_compra")
+  creditLimitValue Decimal?  @map("vl_lim_cred")
+  orderType        String?   @map("tipo_pedido")
+  route            String?   @map("rota")
+  email            String?   @map("e_mail")
+  affiliation      String?   @map("coligacao")
+  cnae             String?   @map("cnae")
+  foundationDate   DateTime? @map("DtFundacao")
+  contactName      String?   @map("nome_contato")
+  contactPosition  String?   @map("cargo_contato")
+  contactEmail     String?   @map("email_contato")
+  contactDDD       String?   @map("ddd_contato")
+  contactPhone     String?   @map("fone_contato")
+  clientPhoneDDD   String?   @map("tel_cli_ddd")
+  clientPhone      String?   @map("tel_cli_numero")
+  address          String?   @map("endereco")
+  neighborhood     String?   @map("bairro")
+  city             String?   @map("municipio")
+  cep              String?   @map("cep")
+  state            String?   @map("estado")
+  street           String?   @map("logradouro")
+  number           String?   @map("numero")
+  complement       String?   @map("complemento")
+
+  @@map("mat_base_clientes")
+  @@schema("erp_externo")
+}
+
+view cropsView {
+  productId        Int?    @map("cd_prod")
+  description      String? @map("descricao")
+  activeIngredient String? @map("principio_ativo")
+  crop             String? @map("cultura_atendida")
+
+  @@unique([productId, crop])
+  @@map("mat_base_culturas")
+  @@schema("erp_externo")
+}
+
+view productsView {
+  id               Int?     @unique @map("cd_prod")
+  product          String?  @map("produto")
+  isActive         Int?     @map("ativo")
+  manufacturerId   String?  @map("cd_fabric")
+  manufacturer     String?  @map("fabricante")
+  department       String?  @map("departamento")
+  section          String?  @map("secao")
+  category         String?  @map("categoria")
+  line             String?  @map("linha")
+  stockUnity       String?  @map("unid_est")
+  purchaseUnity    String?  @map("unid_cmp")
+  purchaseQuantity Int?     @map("qtde_unid_cmp")
+  weight           Decimal? @map("peso_brt")
+  weightNet        Decimal? @map("peso_liq")
+  volume           Decimal? @map("volume")
+  ncm              String?  @map("cd_prod_ncm")
+
+  @@map("mat_base_produtos")
+  @@schema("erp_externo")
 }
 
 enum CommercialTripStatus {
   PENDING     @map("pendente")
   IN_PROGRESS @map("em_andamento")
   COMPLETED   @map("finalizado")
+
+  @@schema("public")
 }
 
 enum GoalMetric {
@@ -25,6 +109,7 @@ model Company {
   name        String
   description String?
   logo        String?
+  active      Boolean   @default(true)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   deletedAt   DateTime?
@@ -53,6 +138,7 @@ model Company {
   deletedBy User? @relation("CompanyDeletedBy", fields: [deletedById], references: [id])
 
   @@index([deletedAt])
+  @@schema("public")
 }
 
 model Person {
@@ -79,6 +165,7 @@ model Person {
 
   @@unique([id, companyId])
   @@index([companyId, deletedAt])
+  @@schema("public")
 }
 
 model User {
@@ -96,7 +183,7 @@ model User {
   updatedById     String?   @db.Uuid
   deletedById     String?   @db.Uuid
 
-  companyMemberships UserCompany[] @relation("UserMemberships")
+  companyMemberships UserCompany[]   @relation("UserMemberships")
   passwordResets     PasswordReset[]
 
   createdMemberships UserCompany[] @relation("UserCompanyCreatedBy")
@@ -115,9 +202,10 @@ model User {
   updatedUsers User[] @relation("UserUpdatedBy")
   deletedUsers User[] @relation("UserDeletedBy")
 
-  createdWallets Wallet[] @relation("WalletCreatedBy")
-  updatedWallets Wallet[] @relation("WalletUpdatedBy")
-  deletedWallets Wallet[] @relation("WalletDeletedBy")
+  createdWallets         Wallet[]         @relation("WalletCreatedBy")
+  updatedWallets         Wallet[]         @relation("WalletUpdatedBy")
+  deletedWallets         Wallet[]         @relation("WalletDeletedBy")
+  createdWalletMovements WalletMovement[] @relation("WalletMovementCreatedBy")
 
   createdRoles Role[] @relation("RoleCreatedBy")
   updatedRoles Role[] @relation("RoleUpdatedBy")
@@ -183,8 +271,8 @@ model User {
   updatedBy User? @relation("UserUpdatedBy", fields: [updatedById], references: [id])
   deletedBy User? @relation("UserDeletedBy", fields: [deletedById], references: [id])
 
-  // Único entre ativos: (email).
   @@index([deletedAt])
+  @@schema("public")
 }
 
 model UserCompany {
@@ -214,6 +302,7 @@ model UserCompany {
   @@unique([userId, companyId])
   @@unique([id, companyId])
   @@index([companyId, deletedAt])
+  @@schema("public")
 }
 
 model Wallet {
@@ -231,6 +320,7 @@ model Wallet {
   userCompany UserCompany @relation(fields: [userCompanyId, companyId], references: [id, companyId], onDelete: Restrict)
 
   commercialActions CommercialAction[]
+  movements         WalletMovement[]
 
   createdBy User? @relation("WalletCreatedBy", fields: [createdById], references: [id])
   updatedBy User? @relation("WalletUpdatedBy", fields: [updatedById], references: [id])
@@ -238,6 +328,39 @@ model Wallet {
 
   @@unique([id, companyId])
   @@index([userCompanyId, deletedAt])
+  @@schema("public")
+}
+
+enum WalletMovementType {
+  INITIAL_BALANCE @map("saldo_inicial")
+  ADJUSTMENT      @map("ajuste")
+  ACTION_DEBIT    @map("debito_acao")
+  ACTION_REFUND   @map("estorno_acao")
+
+  @@schema("public")
+}
+
+model WalletMovement {
+  id                 String             @id @default(uuid()) @db.Uuid
+  sequence           Int                @default(autoincrement())
+  walletId           String             @db.Uuid
+  companyId          String             @db.Uuid
+  type               WalletMovementType
+  amount             Decimal            @db.Decimal(14, 2)
+  balanceAfter       Decimal            @db.Decimal(14, 2)
+  reason             String?
+  commercialActionId String?            @db.Uuid
+  createdAt          DateTime           @default(now())
+  createdById        String?            @db.Uuid
+
+  wallet           Wallet            @relation(fields: [walletId, companyId], references: [id, companyId], onDelete: Restrict)
+  commercialAction CommercialAction? @relation(fields: [commercialActionId, companyId], references: [id, companyId], onDelete: Restrict)
+
+  createdBy User? @relation("WalletMovementCreatedBy", fields: [createdById], references: [id])
+
+  @@index([walletId, sequence])
+  @@index([commercialActionId])
+  @@schema("public")
 }
 
 model Role {
@@ -263,6 +386,7 @@ model Role {
 
   @@unique([id, companyId])
   @@index([companyId, deletedAt])
+  @@schema("public")
 }
 
 model Permission {
@@ -271,6 +395,8 @@ model Permission {
   description String?
 
   roles RolePermission[]
+
+  @@schema("public")
 }
 
 model UserRole {
@@ -283,6 +409,7 @@ model UserRole {
 
   @@id([roleId, userCompanyId])
   @@index([userCompanyId])
+  @@schema("public")
 }
 
 model RolePermission {
@@ -290,10 +417,11 @@ model RolePermission {
   permissionId String @db.Uuid
 
   role       Role       @relation(fields: [roleId], references: [id], onDelete: Restrict)
- permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
 
   @@id([roleId, permissionId])
   @@index([permissionId])
+  @@schema("public")
 }
 
 model Invitation {
@@ -319,6 +447,7 @@ model Invitation {
 
   @@unique([id, companyId])
   @@index([companyId, deletedAt])
+  @@schema("public")
 }
 
 model PasswordReset {
@@ -332,6 +461,7 @@ model PasswordReset {
   user User @relation(fields: [userId], references: [id])
 
   @@index([userId])
+  @@schema("public")
 }
 
 model EmailVerification {
@@ -346,6 +476,7 @@ model EmailVerification {
   createdAt  DateTime  @default(now())
 
   @@index([email, createdAt])
+  @@schema("public")
 }
 
 model InvitationRole {
@@ -358,6 +489,7 @@ model InvitationRole {
 
   @@id([invitationId, roleId])
   @@index([roleId])
+  @@schema("public")
 }
 
 model Employee {
@@ -390,6 +522,7 @@ model Employee {
   @@unique([id, companyId])
   @@unique([userCompanyId, companyId])
   @@index([companyId, deletedAt])
+  @@schema("public")
 }
 
 model Potential {
@@ -414,6 +547,7 @@ model Potential {
 
   @@unique([id, companyId])
   @@index([companyId, deletedAt])
+  @@schema("public")
 }
 
 model Producer {
@@ -445,6 +579,7 @@ model Producer {
   @@unique([id, companyId])
   @@index([companyId, deletedAt])
   @@index([potentialId])
+  @@schema("public")
 }
 
 model Reseller {
@@ -463,7 +598,6 @@ model Reseller {
 
   company Company @relation(fields: [companyId], references: [id])
 
-  commercialActionGuests CommercialActionResellerGuest[]
 
   createdBy User? @relation("ResellerCreatedBy", fields: [createdById], references: [id])
   updatedBy User? @relation("ResellerUpdatedBy", fields: [updatedById], references: [id])
@@ -471,6 +605,7 @@ model Reseller {
 
   @@unique([id, companyId])
   @@index([companyId, deletedAt])
+  @@schema("public")
 }
 
 model Event {
@@ -494,25 +629,26 @@ model Event {
 
   @@unique([id, companyId])
   @@index([companyId, deletedAt])
+  @@schema("public")
 }
 
 model CommercialAction {
-  id               String    @id @default(uuid()) @db.Uuid
-  description      String?
-  eventId          String    @db.Uuid
-  price            Decimal?  @db.Decimal(14, 2)
-  initialDate      DateTime?
-  finalDate        DateTime?
-  walletId         String    @db.Uuid
-  responsibleId    String    @db.Uuid
-  companyId        String    @db.Uuid
-  invoiceNumber    String?
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
-  deletedAt        DateTime?
-  createdById      String?   @db.Uuid
-  updatedById      String?   @db.Uuid
-  deletedById      String?   @db.Uuid
+  id            String    @id @default(uuid()) @db.Uuid
+  description   String?
+  eventId       String    @db.Uuid
+  price         Decimal?  @db.Decimal(14, 2)
+  initialDate   DateTime?
+  finalDate     DateTime?
+  walletId      String    @db.Uuid
+  responsibleId String    @db.Uuid
+  companyId     String    @db.Uuid
+  invoiceNumber String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
+  createdById   String?   @db.Uuid
+  updatedById   String?   @db.Uuid
+  deletedById   String?   @db.Uuid
 
   event       Event    @relation(fields: [eventId, companyId], references: [id, companyId])
   wallet      Wallet   @relation(fields: [walletId, companyId], references: [id, companyId])
@@ -524,12 +660,15 @@ model CommercialAction {
   participants   CommercialActionParticipant[]
   files          FileCommercialAction[]
 
+  walletMovements WalletMovement[]
+
   createdBy User? @relation("CommercialActionCreatedBy", fields: [createdById], references: [id])
   updatedBy User? @relation("CommercialActionUpdatedBy", fields: [updatedById], references: [id])
   deletedBy User? @relation("CommercialActionDeletedBy", fields: [deletedById], references: [id])
 
   @@unique([id, companyId])
   @@index([companyId, deletedAt])
+  @@schema("public")
 }
 
 model CommercialActionProducerGuest {
@@ -543,19 +682,20 @@ model CommercialActionProducerGuest {
 
   @@unique([commercialActionId, producerId])
   @@index([producerId])
+  @@schema("public")
 }
 
 model CommercialActionResellerGuest {
   id                 String @id @default(uuid()) @db.Uuid
   commercialActionId String @db.Uuid
-  resellerId         String @db.Uuid
+  resellerId         Int
   companyId          String @db.Uuid
 
   commercialAction CommercialAction @relation(fields: [commercialActionId, companyId], references: [id, companyId])
-  reseller         Reseller         @relation(fields: [resellerId, companyId], references: [id, companyId])
 
   @@unique([commercialActionId, resellerId])
   @@index([resellerId])
+  @@schema("public")
 }
 
 model CommercialActionParticipant {
@@ -568,25 +708,26 @@ model CommercialActionParticipant {
   commercialAction CommercialAction @relation(fields: [commercialActionId, companyId], references: [id, companyId])
 
   @@unique([employeeId, commercialActionId])
+  @@schema("public")
 }
 
 model CommercialTrip {
   id                         String               @id @default(uuid()) @db.Uuid
   performedActionDescription String?
-  followUpDetails           String?
-  pendingIssuesDescription  String?
-  status                    CommercialTripStatus @default(PENDING)
-  tripDate                  DateTime?
-  expectedDate              DateTime?
-  producerId                String               @db.Uuid
-  responsibleId             String               @db.Uuid
-  companyId                 String               @db.Uuid
-  createdAt                 DateTime             @default(now())
-  updatedAt                 DateTime             @updatedAt
-  deletedAt                 DateTime?
-  createdById               String?              @db.Uuid
-  updatedById               String?              @db.Uuid
-  deletedById               String?              @db.Uuid
+  followUpDetails            String?
+  pendingIssuesDescription   String?
+  status                     CommercialTripStatus @default(PENDING)
+  tripDate                   DateTime?
+  expectedDate               DateTime?
+  producerId                 String               @db.Uuid
+  responsibleId              String               @db.Uuid
+  companyId                  String               @db.Uuid
+  createdAt                  DateTime             @default(now())
+  updatedAt                  DateTime             @updatedAt
+  deletedAt                  DateTime?
+  createdById                String?              @db.Uuid
+  updatedById                String?              @db.Uuid
+  deletedById                String?              @db.Uuid
 
   producer    Producer @relation(fields: [producerId, companyId], references: [id, companyId])
   responsible Employee @relation("CommercialTripResponsible", fields: [responsibleId, companyId], references: [id, companyId])
@@ -603,6 +744,7 @@ model CommercialTrip {
 
   @@unique([id, companyId])
   @@index([companyId, deletedAt])
+  @@schema("public")
 }
 
 model CommercialTripParticipant {
@@ -615,6 +757,7 @@ model CommercialTripParticipant {
   commercialTrip CommercialTrip @relation(fields: [commercialTripId, companyId], references: [id, companyId])
 
   @@unique([employeeId, commercialTripId])
+  @@schema("public")
 }
 
 model Harvest {
@@ -632,6 +775,8 @@ model Harvest {
   createdBy User? @relation("HarvestCreatedBy", fields: [createdById], references: [id])
   updatedBy User? @relation("HarvestUpdatedBy", fields: [updatedById], references: [id])
   deletedBy User? @relation("HarvestDeletedBy", fields: [deletedById], references: [id])
+
+  @@schema("public")
 }
 
 model CommercialTripHarvest {
@@ -643,6 +788,7 @@ model CommercialTripHarvest {
   commercialTrip CommercialTrip @relation(fields: [commercialTripId], references: [id])
 
   @@unique([harvestId, commercialTripId])
+  @@schema("public")
 }
 
 model Manufacturer {
@@ -664,6 +810,8 @@ model Manufacturer {
   createdBy User? @relation("ManufacturerCreatedBy", fields: [createdById], references: [id])
   updatedBy User? @relation("ManufacturerUpdatedBy", fields: [updatedById], references: [id])
   deletedBy User? @relation("ManufacturerDeletedBy", fields: [deletedById], references: [id])
+
+  @@schema("public")
 }
 
 model Product {
@@ -685,7 +833,6 @@ model Product {
   company      Company      @relation(fields: [companyId], references: [id])
 
   groups          ProductGroup[]
-  recommendations ProductRecommendation[]
   files           FileProduct[]
 
   createdBy User? @relation("ProductCreatedBy", fields: [createdById], references: [id])
@@ -694,6 +841,7 @@ model Product {
 
   @@unique([id, companyId])
   @@index([companyId, deletedAt])
+  @@schema("public")
 }
 
 model Group {
@@ -717,6 +865,7 @@ model Group {
 
   @@unique([id, companyId])
   @@index([companyId, deletedAt])
+  @@schema("public")
 }
 
 model Goal {
@@ -758,18 +907,19 @@ model ProductGroup {
   group   Group   @relation(fields: [groupId, companyId], references: [id, companyId])
 
   @@unique([productId, groupId])
+  @@schema("public")
 }
 
 model ProductRecommendation {
   id               String @id @default(uuid()) @db.Uuid
   commercialTripId String @db.Uuid
-  productId        String @db.Uuid
+  productId        Int
   companyId        String @db.Uuid
 
   commercialTrip CommercialTrip @relation(fields: [commercialTripId, companyId], references: [id, companyId])
-  product        Product        @relation(fields: [productId, companyId], references: [id, companyId])
 
   @@unique([commercialTripId, productId])
+  @@schema("public")
 }
 
 model File {
@@ -798,6 +948,7 @@ model File {
 
   @@unique([id, companyId])
   @@index([companyId, deletedAt])
+  @@schema("public")
 }
 
 model FileCommercialAction {
@@ -810,6 +961,7 @@ model FileCommercialAction {
   commercialAction CommercialAction @relation(fields: [commercialActionId, companyId], references: [id, companyId])
 
   @@unique([fileId, commercialActionId])
+  @@schema("public")
 }
 
 model FileCommercialTrip {
@@ -822,6 +974,7 @@ model FileCommercialTrip {
   commercialTrip CommercialTrip @relation(fields: [commercialTripId, companyId], references: [id, companyId])
 
   @@unique([fileId, commercialTripId])
+  @@schema("public")
 }
 
 model FileProduct {
@@ -834,4 +987,5 @@ model FileProduct {
   product Product @relation(fields: [productId, companyId], references: [id, companyId])
 
   @@unique([fileId, productId])
+  @@schema("public")
 }

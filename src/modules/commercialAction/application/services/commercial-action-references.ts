@@ -5,7 +5,7 @@ import { EMPLOYEE_REPOSITORY, EmployeeRepository } from "../../../employee";
 import { EVENT_REPOSITORY, EventRepository } from "../../../event";
 import { FILE_REPOSITORY, FileRepository } from "../../../file";
 import { PRODUCER_REPOSITORY, ProducerRepository } from "../../../producer";
-import { RESELLER_REPOSITORY, ResellerRepository } from "../../../reseller";
+import { RESELLER_VIEW_REPOSITORY, ResellerViewRepository } from "../../../resellersView";
 import { WALLET_REPOSITORY, WalletRepository } from "../../../wallet";
 import { CommercialAction } from "../../domain/entities/commercialAction";
 import { UpdateCommercialActionDto } from "../dtos/update-commercialAction-dto";
@@ -21,8 +21,8 @@ export class CommercialActionReferences {
     private readonly employeeRepository: EmployeeRepository,
     @inject(PRODUCER_REPOSITORY)
     private readonly producerRepository: ProducerRepository,
-    @inject(RESELLER_REPOSITORY)
-    private readonly resellerRepository: ResellerRepository,
+    @inject(RESELLER_VIEW_REPOSITORY)
+    private readonly resellerViewRepository: ResellerViewRepository,
     @inject(FILE_REPOSITORY)
     private readonly fileRepository: FileRepository,
   ) {}
@@ -36,7 +36,7 @@ export class CommercialActionReferences {
       changes.eventId !== undefined &&
       !(await this.eventRepository.findById(commercialAction.eventId, companyId))
     ) {
-      throw new ResourceNotFoundError("Evento não encontrado.");
+      throw new ResourceNotFoundError("Tipo de evento não encontrado.");
     }
 
     if (
@@ -64,7 +64,7 @@ export class CommercialActionReferences {
     if (changes.resellerGuestIds !== undefined) {
       await this.ensureAll(
         commercialAction.resellerGuestIds,
-        (ids) => this.resellerRepository.findManyByIds(ids, companyId),
+        (ids) => this.resellerViewRepository.findManyByIds(ids),
         "Revenda convidada não encontrada.",
       );
     }
@@ -86,9 +86,9 @@ export class CommercialActionReferences {
     }
   }
 
-  private async ensureAll(
-    ids: string[],
-    findManyByIds: (ids: string[]) => Promise<unknown[]>,
+  private async ensureAll<T extends string | number>(
+    ids: T[],
+    findManyByIds: (ids: T[]) => Promise<unknown[]>,
     message: string,
   ): Promise<void> {
     if (ids.length > 0 && (await findManyByIds(ids)).length !== ids.length) {
