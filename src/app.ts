@@ -25,6 +25,7 @@ import { employeeRouter } from "./modules/employee";
 import { commercialTripRouter } from "./modules/commercialTrip";
 import { commercialActionRouter } from "./modules/commercialAction";
 import { groupRouter } from "./modules/group";
+import { goalRouter } from "./modules/goal";
 import { cropViewRouter } from "./modules/cropsView";
 import { pogPocRouter } from "./modules/pogPoc";
 
@@ -62,6 +63,7 @@ app.use("/events", eventRouter());
 app.use("/commercial-trips", commercialTripRouter());
 app.use("/commercial-actions", commercialActionRouter());
 app.use("/groups", groupRouter());
+app.use("/goals", goalRouter());
 app.use("/crops", cropViewRouter());
 app.use("/pog-poc", pogPocRouter());
 app.use("/dashboard", dashboardRouter());
