@@ -25,7 +25,7 @@ export class UpdateEventUseCase {
     const event = await this.eventRepository.findById(id, context.companyId);
 
     if (!event) {
-      throw new ResourceNotFoundError("Evento não encontrado.");
+      throw new ResourceNotFoundError("Tipo de evento não encontrado.");
     }
 
     event.update({ ...input, updatedById: context.userId });

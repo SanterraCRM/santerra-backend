@@ -16,7 +16,7 @@ export interface CommercialActionProps {
   companyId: string;
   invoiceNumber: string | null;
   producerGuestIds: string[];
-  resellerGuestIds: string[];
+  resellerGuestIds: number[];
   participantIds: string[];
   fileIds: string[];
   createdAt: Date;
@@ -43,7 +43,7 @@ interface CreateCommercialActionProps {
   companyId: string;
   invoiceNumber?: string | null;
   producerGuestIds?: string[];
-  resellerGuestIds?: string[];
+  resellerGuestIds?: number[];
   participantIds?: string[];
   fileIds?: string[];
   createdById?: string | null;
@@ -59,7 +59,7 @@ export interface UpdateCommercialActionProps {
   responsibleId?: string;
   invoiceNumber?: string | null;
   producerGuestIds?: string[];
-  resellerGuestIds?: string[];
+  resellerGuestIds?: number[];
   participantIds?: string[];
   fileIds?: string[];
   updatedById?: string | null;
@@ -131,7 +131,7 @@ export class CommercialAction {
     return [...this.props.producerGuestIds];
   }
 
-  get resellerGuestIds(): string[] {
+  get resellerGuestIds(): number[] {
     return [...this.props.resellerGuestIds];
   }
 
@@ -222,7 +222,7 @@ export class CommercialAction {
 
   private static normalizeEventId(eventId: string): string {
     if (typeof eventId !== "string" || eventId.trim().length === 0) {
-      throw new DomainError("O ID do evento é obrigatório.");
+      throw new DomainError("O ID do tipo de evento é obrigatório.");
     }
 
     return eventId.trim();
@@ -264,7 +264,7 @@ export class CommercialAction {
     return price;
   }
 
-  private static normalizeIds(ids: string[]): string[] {
+  private static normalizeIds<T extends string | number>(ids: T[]): T[] {
     return [...new Set(ids)];
   }
 

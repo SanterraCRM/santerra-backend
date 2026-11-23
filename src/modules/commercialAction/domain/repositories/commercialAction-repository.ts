@@ -20,6 +20,11 @@ export interface CommercialActionRelation {
   name: string;
 }
 
+export interface CommercialActionReseller {
+  id: number;
+  name: string;
+}
+
 export interface CommercialActionFile {
   id: string;
   originalName: string | null;
@@ -33,7 +38,7 @@ export interface CommercialActionDetails {
   responsible: CommercialActionRelation;
   wallet: CommercialActionRelation;
   producerGuests: CommercialActionRelation[];
-  resellerGuests: CommercialActionRelation[];
+  resellerGuests: CommercialActionReseller[];
   participants: CommercialActionRelation[];
   files: CommercialActionFile[];
 }

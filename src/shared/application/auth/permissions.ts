@@ -17,6 +17,7 @@ export const PERMISSIONS = {
   ROLES_DELETE: "roles.delete",
 
   MEMBERS_READ: "members.read",
+  MEMBERS_CREATE: "members.create",
   MEMBERS_UPDATE: "members.update",
   MEMBERS_DELETE: "members.delete",
 
@@ -28,6 +29,7 @@ export const PERMISSIONS = {
   WALLETS_CREATE: "wallets.create",
   WALLETS_UPDATE: "wallets.update",
   WALLETS_DELETE: "wallets.delete",
+  WALLETS_ADJUST: "wallets.adjust",
 
   FILES_READ: "files.read",
   FILES_CREATE: "files.create",
@@ -73,6 +75,11 @@ export const PERMISSIONS = {
   COMMERCIAL_ACTIONS_CREATE: "commercial-actions.create",
   COMMERCIAL_ACTIONS_UPDATE: "commercial-actions.update",
   COMMERCIAL_ACTIONS_DELETE: "commercial-actions.delete",
+
+  GOALS_READ: "goals.read",
+  GOALS_CREATE: "goals.create",
+  GOALS_UPDATE: "goals.update",
+  GOALS_DELETE: "goals.delete",
 } as const;
 
 export type PermissionName = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];

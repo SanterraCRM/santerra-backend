@@ -3,7 +3,16 @@ import { z } from "zod";
 import {
   booleanQuerySchema,
   listQuerySchema,
+  passwordSchema,
+  sortQuerySchema,
 } from "../../../../shared/http/request-schemas";
+
+export const createMemberSchema = z.object({
+  email: z.email(),
+  name: z.string().optional(),
+  password: passwordSchema.optional(),
+  roleIds: z.array(z.uuid()).optional(),
+});
 
 export const updateMemberSchema = z
   .object({
@@ -18,4 +27,5 @@ export const listMembersQuerySchema = listQuerySchema.extend({
   active: booleanQuerySchema.optional(),
   roleId: z.uuid().optional(),
   hasWallet: booleanQuerySchema.optional(),
+  ...sortQuerySchema.shape,
 });

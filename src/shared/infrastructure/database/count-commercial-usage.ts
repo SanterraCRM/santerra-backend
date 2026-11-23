@@ -25,10 +25,11 @@ export async function countCommercialUsage(
     actions.push({ producerGuests: { some: { producer } } });
   }
 
-  const [commercialTrips, commercialActions] = await prisma.$transaction([
+  const [commercialTrips, commercialActions, goals = 0] = await prisma.$transaction([
     prisma.commercialTrip.count({ where: { companyId, deletedAt: null, OR: trips } }),
     prisma.commercialAction.count({ where: { companyId, deletedAt: null, OR: actions } }),
+    ...(employee ? [prisma.goal.count({ where: { companyId, deletedAt: null, employee } })] : []),
   ]);
 
-  return { commercialTrips, commercialActions };
+  return { commercialTrips, commercialActions, goals };
 }

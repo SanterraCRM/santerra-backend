@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
   booleanQuerySchema,
   listQuerySchema,
+  passwordSchema,
 } from "../../../../shared/http/request-schemas";
 
 export const createEmployeeSchema = z.object({
@@ -10,6 +11,12 @@ export const createEmployeeSchema = z.object({
   userCompanyId: z.uuid().nullish(),
   hiredAt: z.coerce.date().nullish(),
   terminatedAt: z.coerce.date().nullish(),
+  access: z
+    .object({
+      password: passwordSchema,
+      roleIds: z.array(z.uuid()).min(1),
+    })
+    .optional(),
 });
 
 export const updateEmployeeSchema = createEmployeeSchema

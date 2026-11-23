@@ -3,6 +3,7 @@ import { injectable } from "tsyringe";
 
 import { Member } from "../../domain/entities/member";
 import {
+  MemberAccess,
   MemberRepository,
   FindMembersParams,
   FindMembersResult,
@@ -16,10 +17,24 @@ import {
   memberDetailsInclude,
   memberInclude,
 } from "./prisma-member-mapper";
+import { saveMemberAccess } from "./save-member-access";
 
 @injectable()
 export class PrismaMemberRepository implements MemberRepository {
   constructor(private readonly prisma: PrismaClient) {}
+
+  async add(access: MemberAccess): Promise<MemberDetails> {
+    const addedMember = await this.prisma.$transaction(async (transaction) => {
+      await saveMemberAccess(transaction, access);
+
+      return transaction.userCompany.findUniqueOrThrow({
+        where: { id: access.member.id },
+        include: memberDetailsInclude,
+      });
+    });
+
+    return PrismaMemberMapper.toDetails(addedMember);
+  }
 
   async findById(
     id: string,
@@ -96,7 +111,8 @@ export class PrismaMemberRepository implements MemberRepository {
       this.prisma.userCompany.findMany({
         where,
         include: memberDetailsInclude,
-        orderBy: { createdAt: "desc" },
+        orderBy:
+          params.sort === "name" ? [{ user: { name: "asc" } }, { id: "asc" }] : { createdAt: "desc" },
         skip: (params.page - 1) * params.limit,
         take: params.limit,
       }),

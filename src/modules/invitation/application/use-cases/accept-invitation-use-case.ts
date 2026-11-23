@@ -44,11 +44,11 @@ export class AcceptInvitationUseCase {
       Invitation.hashToken(input.token),
     );
 
-    if (
-      !invitation ||
-      !invitation.isPending() ||
-      !(await this.companyRepository.findById(invitation.companyId))
-    ) {
+    const company = invitation?.isPending()
+      ? await this.companyRepository.findById(invitation.companyId)
+      : null;
+
+    if (!invitation || !company?.active) {
       throw new ResourceNotFoundError("Convite inválido ou expirado.");
     }
 

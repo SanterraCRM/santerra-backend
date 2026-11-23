@@ -1,3 +1,4 @@
+import { ListSort } from "../../../../shared/domain/list-sort";
 import { Manufacturer } from "../entities/manufacturer";
 
 export const MANUFACTURER_REPOSITORY = "ManufacturerRepository";
@@ -12,6 +13,7 @@ export interface FindManufacturersParams {
   createdFrom?: Date;
   createdTo?: Date;
   missing?: ManufacturerOptionalField[];
+  sort?: ListSort;
   includeDeleted: boolean;
 }
 

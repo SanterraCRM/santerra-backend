@@ -1,7 +1,7 @@
 import { Prisma, PrismaClient } from "@prisma/client";
 import { injectable } from "tsyringe";
 
-import { InsufficientBalanceError } from "../../../wallet";
+import { changeWalletBalance, InsufficientBalanceError } from "../../../wallet";
 import {
   CommercialAction,
   CommercialActionProps,
@@ -17,7 +17,10 @@ import {
   commercialActionDetailsInclude,
   commercialActionInclude,
   PrismaCommercialActionMapper,
+  ResellerNames,
 } from "./prisma-commercialAction-mapper";
+
+type ResellerGuestRows = { resellerGuests: { resellerId: number }[] }[];
 
 @injectable()
 export class PrismaCommercialActionRepository implements CommercialActionRepository {
@@ -33,8 +36,8 @@ export class PrismaCommercialActionRepository implements CommercialActionReposit
       ...data
     } = props;
     const createdCommercialAction = await this.prisma.$transaction(async (transaction) => {
-      await this.debit(transaction, commercialAction.charge, data.companyId);
       await transaction.commercialAction.create({ data });
+      await this.debit(transaction, commercialAction.charge, data.companyId, data.id, data.createdById);
       await this.replaceLinks(transaction, props);
 
       return transaction.commercialAction.findUniqueOrThrow({
@@ -43,7 +46,7 @@ export class PrismaCommercialActionRepository implements CommercialActionReposit
       });
     });
 
-    return PrismaCommercialActionMapper.toDetails(createdCommercialAction);
+    return this.toDetails(createdCommercialAction);
   }
 
   async findById(
@@ -69,7 +72,7 @@ export class PrismaCommercialActionRepository implements CommercialActionReposit
       include: commercialActionDetailsInclude,
     });
 
-    return commercialAction ? PrismaCommercialActionMapper.toDetails(commercialAction) : null;
+    return commercialAction ? this.toDetails(commercialAction) : null;
   }
 
   async findMany(params: FindCommercialActionsParams): Promise<FindCommercialActionsResult> {
@@ -99,8 +102,12 @@ export class PrismaCommercialActionRepository implements CommercialActionReposit
       this.prisma.commercialAction.count({ where }),
     ]);
 
+    const resellerNames = await this.findResellerNames(commercialActions);
+
     return {
-      commercialActions: commercialActions.map(PrismaCommercialActionMapper.toDetails),
+      commercialActions: commercialActions.map((commercialAction) =>
+        PrismaCommercialActionMapper.toDetails(commercialAction, resellerNames),
+      ),
       total,
     };
   }
@@ -116,8 +123,8 @@ export class PrismaCommercialActionRepository implements CommercialActionReposit
         charge.walletId !== previousCharge.walletId ||
         charge.amount !== previousCharge.amount
       ) {
-        await this.refund(transaction, previousCharge, props.companyId);
-        await this.debit(transaction, charge, props.companyId);
+        await this.refund(transaction, previousCharge, props.companyId, props.id, props.updatedById);
+        await this.debit(transaction, charge, props.companyId, props.id, props.updatedById);
       }
 
       await this.replaceLinks(transaction, props);
@@ -144,7 +151,42 @@ export class PrismaCommercialActionRepository implements CommercialActionReposit
       });
     });
 
-    return PrismaCommercialActionMapper.toDetails(updatedCommercialAction);
+    return this.toDetails(updatedCommercialAction);
+  }
+
+  private async toDetails(
+    commercialAction: Parameters<typeof PrismaCommercialActionMapper.toDetails>[0],
+  ): Promise<CommercialActionDetails> {
+    const resellerNames = await this.findResellerNames([commercialAction]);
+
+    return PrismaCommercialActionMapper.toDetails(commercialAction, resellerNames);
+  }
+
+  private async findResellerNames(commercialActions: ResellerGuestRows): Promise<ResellerNames> {
+    const ids = [
+      ...new Set(
+        commercialActions.flatMap(({ resellerGuests }) =>
+          resellerGuests.map(({ resellerId }) => resellerId),
+        ),
+      ),
+    ];
+
+    if (ids.length === 0) {
+      return new Map();
+    }
+
+    const resellers = await this.prisma.resellersView.findMany({
+      where: { id: { in: ids } },
+      select: { id: true, name: true, fantasyName: true },
+    });
+
+    return new Map(
+      resellers.flatMap(({ id, name, fantasyName }) => {
+        const label = name?.trim() || fantasyName?.trim();
+
+        return id === null || !label ? [] : [[id, label] as const];
+      }),
+    );
   }
 
   async delete(commercialAction: CommercialAction): Promise<void> {
@@ -163,7 +205,13 @@ export class PrismaCommercialActionRepository implements CommercialActionReposit
         },
       });
 
-      await this.refund(transaction, commercialAction.charge, data.companyId);
+      await this.refund(
+        transaction,
+        commercialAction.charge,
+        data.companyId,
+        data.id,
+        data.deletedById,
+      );
     });
   }
 
@@ -196,22 +244,23 @@ export class PrismaCommercialActionRepository implements CommercialActionReposit
     transaction: Prisma.TransactionClient,
     charge: WalletCharge,
     companyId: string,
+    commercialActionId: string,
+    userId: string | null,
   ): Promise<void> {
     if (charge.amount === 0) {
       return;
     }
 
-    const { count } = await transaction.wallet.updateMany({
-      where: {
-        id: charge.walletId,
-        companyId,
-        deletedAt: null,
-        value: { gte: charge.amount },
-      },
-      data: { value: { decrement: charge.amount } },
+    const debited = await changeWalletBalance(transaction, {
+      walletId: charge.walletId,
+      companyId,
+      amount: -charge.amount,
+      type: "ACTION_DEBIT",
+      commercialActionId,
+      userId,
     });
 
-    if (count === 0) {
+    if (!debited) {
       throw new InsufficientBalanceError();
     }
   }
@@ -220,17 +269,21 @@ export class PrismaCommercialActionRepository implements CommercialActionReposit
     transaction: Prisma.TransactionClient,
     charge: WalletCharge,
     companyId: string,
+    commercialActionId: string,
+    userId: string | null,
   ): Promise<void> {
     if (charge.amount === 0) {
       return;
     }
 
-    await transaction.wallet.updateMany({
-      where: {
-        id: charge.walletId,
-        companyId,
-      },
-      data: { value: { increment: charge.amount } },
+    await changeWalletBalance(transaction, {
+      walletId: charge.walletId,
+      companyId,
+      amount: charge.amount,
+      type: "ACTION_REFUND",
+      commercialActionId,
+      userId,
+      enforceLimits: false,
     });
   }
 }

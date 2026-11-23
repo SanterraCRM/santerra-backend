@@ -3,6 +3,7 @@ import { injectable } from "tsyringe";
 
 import { CommercialUsage } from "../../../../shared/domain/commercial-usage";
 import { countCommercialUsage } from "../../../../shared/infrastructure/database/count-commercial-usage";
+import { MemberAccess, saveMemberAccess } from "../../../member";
 import { Employee } from "../../domain/entities/employee";
 import {
   EmployeeListItem,
@@ -16,9 +17,15 @@ import { PrismaEmployeeMapper } from "./prisma-employee-mapper";
 export class PrismaEmployeeRepository implements EmployeeRepository {
   constructor(private readonly prisma: PrismaClient) { }
 
-  async create(employee: Employee): Promise<Employee> {
+  async create(employee: Employee, access?: MemberAccess | null): Promise<Employee> {
     const data = employee.toObject();
-    const createdEmployee = await this.prisma.employee.create({ data });
+    const createdEmployee = await this.prisma.$transaction(async (transaction) => {
+      if (access) {
+        await saveMemberAccess(transaction, access);
+      }
+
+      return transaction.employee.create({ data });
+    });
 
     return PrismaEmployeeMapper.toDomain(createdEmployee);
   }
@@ -135,22 +142,28 @@ export class PrismaEmployeeRepository implements EmployeeRepository {
     return countCommercialUsage(this.prisma, companyId, { employee: { id } });
   }
 
-  async update(employee: Employee): Promise<Employee> {
+  async update(employee: Employee, access?: MemberAccess | null): Promise<Employee> {
     const data = employee.toObject();
-    const updatedEmployee = await this.prisma.employee.update({
-      where: {
-        id: data.id,
-        companyId: data.companyId,
-        deletedAt: null,
-      },
-      data: {
-        personId: data.personId,
-        userCompanyId: data.userCompanyId,
-        hiredAt: data.hiredAt,
-        terminatedAt: data.terminatedAt,
-        updatedAt: data.updatedAt,
-        updatedById: data.updatedById,
-      },
+    const updatedEmployee = await this.prisma.$transaction(async (transaction) => {
+      if (access) {
+        await saveMemberAccess(transaction, access);
+      }
+
+      return transaction.employee.update({
+        where: {
+          id: data.id,
+          companyId: data.companyId,
+          deletedAt: null,
+        },
+        data: {
+          personId: data.personId,
+          userCompanyId: data.userCompanyId,
+          hiredAt: data.hiredAt,
+          terminatedAt: data.terminatedAt,
+          updatedAt: data.updatedAt,
+          updatedById: data.updatedById,
+        },
+      });
     });
 
     return PrismaEmployeeMapper.toDomain(updatedEmployee);

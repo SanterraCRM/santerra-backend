@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { LIST_SORTS } from "../domain/list-sort";
+
 const MAX_LIMIT = 100;
 const MIN_PASSWORD_LENGTH = 8;
 
@@ -29,4 +31,8 @@ export const dateTimeQuerySchema = z.iso
 export const createdAtRangeQuerySchema = z.object({
   createdFrom: dateTimeQuerySchema.optional(),
   createdTo: dateTimeQuerySchema.optional(),
+});
+
+export const sortQuerySchema = z.object({
+  sort: z.enum(LIST_SORTS).optional(),
 });

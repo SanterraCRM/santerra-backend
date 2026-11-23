@@ -7,8 +7,9 @@ import {
   getAuthContext,
   getTenantContext,
 } from "../../../../shared/http/request-context";
-import { idParamSchema, listQuerySchema } from "../../../../shared/http/request-schemas";
+import { idParamSchema } from "../../../../shared/http/request-schemas";
 import { CreateCompanyUseCase } from "../../application/use-cases/create-company-use-case";
+import { DeactivateCompanyUseCase } from "../../application/use-cases/deactivate-company-use-case";
 import { DeleteCompanyUseCase } from "../../application/use-cases/delete-company-use-case";
 import { GetCompanyLogoUseCase } from "../../application/use-cases/get-company-logo-use-case";
 import { GetCompanyUseCase } from "../../application/use-cases/get-company-use-case";
@@ -20,7 +21,10 @@ import {
   COMPANY_LOGO_FIELD_NAME,
   companyLogoQuerySchema,
   createCompanySchema,
+  deactivateCompanySchema,
+  listCompaniesQuerySchema,
   updateCompanySchema,
+  updatePlatformCompanySchema,
 } from "./company-schemas";
 
 const LOGO_VERSIONED_CACHE = "public, max-age=31536000, immutable";
@@ -37,6 +41,7 @@ export class CompanyController {
     private readonly getCompanyLogoUseCase: GetCompanyLogoUseCase,
     private readonly updateCompanyLogoUseCase: UpdateCompanyLogoUseCase,
     private readonly removeCompanyLogoUseCase: RemoveCompanyLogoUseCase,
+    private readonly deactivateCompanyUseCase: DeactivateCompanyUseCase,
   ) {}
 
   getLogo: RequestHandler = async (request, response) => {
@@ -79,7 +84,7 @@ export class CompanyController {
 
   create: RequestHandler = async (request, response) => {
     const company = await this.createCompanyUseCase.execute(
-      createCompanySchema.parse(request.body),
+      { ...createCompanySchema.parse(request.body), logo: request.file?.buffer },
       getAuthContext(request),
     );
 
@@ -88,7 +93,7 @@ export class CompanyController {
 
   list: RequestHandler = async (request, response) => {
     const result = await this.listCompaniesUseCase.execute(
-      listQuerySchema.parse(request.query),
+      listCompaniesQuerySchema.parse(request.query),
     );
 
     response.status(200).json(result);
@@ -113,7 +118,7 @@ export class CompanyController {
     const { id } = idParamSchema.parse(request.params);
     const company = await this.updateCompanyUseCase.execute(
       id,
-      updateCompanySchema.parse(request.body),
+      updatePlatformCompanySchema.parse(request.body),
       getAuthContext(request),
     );
 
@@ -129,6 +134,15 @@ export class CompanyController {
     );
 
     response.status(200).json(company);
+  };
+
+  deactivateCurrent: RequestHandler = async (request, response) => {
+    await this.deactivateCompanyUseCase.execute(
+      deactivateCompanySchema.parse(request.body),
+      getTenantContext(request),
+    );
+
+    response.status(204).send();
   };
 
   delete: RequestHandler = async (request, response) => {

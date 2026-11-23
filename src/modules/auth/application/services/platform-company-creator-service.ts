@@ -20,6 +20,7 @@ export class PlatformCompanyCreatorService implements PlatformCompanyCreator {
     ownerEmail,
     companyName,
     companyDescription,
+    companyLogo,
     createdById,
   }: CreatePlatformCompanyInput): Promise<string> {
     const owner = await this.userRepository.findByEmail(User.normalizeEmail(ownerEmail));
@@ -38,6 +39,7 @@ export class PlatformCompanyCreatorService implements PlatformCompanyCreator {
       owner,
       companyName,
       companyDescription,
+      companyLogo,
       createdById,
     });
 

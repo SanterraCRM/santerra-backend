@@ -4,6 +4,7 @@ export interface CreatePlatformCompanyInput {
   ownerEmail: string;
   companyName: string;
   companyDescription?: string | null;
+  companyLogo?: Buffer;
   createdById: string;
 }
 

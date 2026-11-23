@@ -68,7 +68,8 @@ export class PrismaManufacturerRepository implements ManufacturerRepository {
       this.prisma.manufacturer.findMany({
         where,
         include: { _count: { select: { products: { where: ACTIVE_PRODUCTS } } } },
-        orderBy: { createdAt: "desc" },
+        orderBy:
+          params.sort === "name" ? [{ name: "asc" }, { id: "asc" }] : { createdAt: "desc" },
         skip: (params.page - 1) * params.limit,
         take: params.limit,
       }),

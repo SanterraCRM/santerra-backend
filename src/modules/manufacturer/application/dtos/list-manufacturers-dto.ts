@@ -1,3 +1,4 @@
+import { ListSort } from "../../../../shared/domain/list-sort";
 import { ManufacturerOptionalField } from "../../domain/repositories/manufacturer-repository";
 
 export interface ListManufacturersDto {
@@ -7,5 +8,6 @@ export interface ListManufacturersDto {
   createdFrom?: Date;
   createdTo?: Date;
   missing?: ManufacturerOptionalField[];
+  sort?: ListSort;
   includeDeleted?: boolean;
 }

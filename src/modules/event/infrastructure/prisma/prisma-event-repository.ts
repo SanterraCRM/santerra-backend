@@ -65,7 +65,8 @@ export class PrismaEventRepository implements EventRepository {
         include: {
           _count: { select: { actions: { where: ACTIVE_ACTIONS } } },
         },
-        orderBy: { createdAt: "desc" },
+        orderBy:
+          params.sort === "name" ? [{ name: "asc" }, { id: "asc" }] : { createdAt: "desc" },
         skip: (params.page - 1) * params.limit,
         take: params.limit,
       }),

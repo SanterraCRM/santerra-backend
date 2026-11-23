@@ -1,5 +1,6 @@
 import { CommercialUsage } from "../../../../shared/domain/commercial-usage";
 import { Employee } from "../../../employee/domain/entities/employee";
+import type { MemberAccess } from "../../../member";
 import { Producer } from "../../../producer/domain/entities/producer";
 import { Person } from "../entities/person";
 
@@ -47,6 +48,7 @@ export interface PersonDetails {
 export interface PersonLinks {
   employee?: Employee;
   producer?: Producer;
+  memberAccess?: MemberAccess | null;
 }
 
 export interface FindPersonsResult {

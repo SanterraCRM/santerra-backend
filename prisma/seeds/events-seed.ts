@@ -20,7 +20,7 @@ const events: Prisma.EventCreateManyInput[] = [
   {
     id: "00000000-0000-4000-a000-000000000004",
     name: "Palestra de Pós-Colheita",
-    description: "Evento com soft delete, não deve aparecer nas listagens.",
+    description: "Tipo de evento com soft delete, não deve aparecer nas listagens.",
     companyId: "00000000-0000-4000-a000-000000000002",
     deletedAt: new Date(),
   },
@@ -33,6 +33,6 @@ export async function seedEvents(prisma: PrismaClient): Promise<void> {
   });
 
   console.log(
-    `[seed] Eventos: ${count} criado(s), ${events.length - count} já existia(m).`,
+    `[seed] Tipos de evento: ${count} criado(s), ${events.length - count} já existia(m).`,
   );
 }

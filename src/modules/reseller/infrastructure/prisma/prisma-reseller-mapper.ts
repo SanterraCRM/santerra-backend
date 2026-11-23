@@ -3,13 +3,7 @@ import { Prisma, Reseller as PrismaReseller } from "@prisma/client";
 import { Reseller } from "../../domain/entities/reseller";
 import { ResellerDetails } from "../../domain/repositories/reseller-repository";
 
-export const resellerDetailsInclude = {
-  _count: {
-    select: {
-      commercialActionGuests: { where: { commercialAction: { deletedAt: null } } },
-    },
-  },
-} satisfies Prisma.ResellerInclude;
+export const resellerDetailsInclude = {} satisfies Prisma.ResellerInclude;
 
 type PrismaResellerDetails = Prisma.ResellerGetPayload<{
   include: typeof resellerDetailsInclude;
@@ -33,10 +27,10 @@ export class PrismaResellerMapper {
     });
   }
 
-  static toDetails({ _count, ...raw }: PrismaResellerDetails): ResellerDetails {
+  static toDetails(raw: PrismaResellerDetails): ResellerDetails {
     return {
       reseller: PrismaResellerMapper.toDomain(raw),
-      actionsCount: _count.commercialActionGuests,
+      actionsCount: 0,
     };
   }
 }

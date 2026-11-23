@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
   createdAtRangeQuerySchema,
   listQuerySchema,
+  sortQuerySchema,
 } from "../../../../shared/http/request-schemas";
 
 export const createEventSchema = z.object({
@@ -18,4 +19,5 @@ export const updateEventSchema = createEventSchema
 
 export const listEventsQuerySchema = listQuerySchema.extend({
   ...createdAtRangeQuerySchema.shape,
+  ...sortQuerySchema.shape,
 });

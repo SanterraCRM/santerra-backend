@@ -4,6 +4,7 @@ import { CommercialTripProps } from "../../domain/entities/commercialTrip";
 import {
   CommercialTripDetails,
   CommercialTripFile,
+  CommercialTripProduct,
   CommercialTripRelation,
 } from "../../domain/repositories/commercialTrip-repository";
 
@@ -12,7 +13,7 @@ export interface CommercialTripDetailsDto extends CommercialTripProps {
   responsible: CommercialTripRelation;
   participants: CommercialTripRelation[];
   harvests: CommercialTripRelation[];
-  recommendedProducts: CommercialTripRelation[] | null;
+  recommendedProducts: CommercialTripProduct[] | null;
   files: CommercialTripFile[] | null;
 }
 

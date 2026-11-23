@@ -1,3 +1,4 @@
+import { ListSort } from "../../../../shared/domain/list-sort";
 import { Event } from "../entities/event";
 
 export const EVENT_REPOSITORY = "EventRepository";
@@ -9,6 +10,7 @@ export interface FindEventsParams {
   search?: string;
   createdFrom?: Date;
   createdTo?: Date;
+  sort?: ListSort;
   includeDeleted: boolean;
 }
 

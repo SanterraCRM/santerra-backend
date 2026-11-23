@@ -1,4 +1,5 @@
 import { CommercialUsage } from "../../../../shared/domain/commercial-usage";
+import type { MemberAccess } from "../../../member";
 import { Employee } from "../entities/employee";
 
 export const EMPLOYEE_REPOSITORY = "EmployeeRepository";
@@ -29,7 +30,7 @@ export interface FindEmployeesResult {
 }
 
 export interface EmployeeRepository {
-  create(employee: Employee): Promise<Employee>;
+  create(employee: Employee, access?: MemberAccess | null): Promise<Employee>;
   findById(
     id: string,
     companyId: string,
@@ -41,6 +42,6 @@ export interface EmployeeRepository {
   findListItemById(id: string, companyId: string): Promise<EmployeeListItem | null>;
   findMany(params: FindEmployeesParams): Promise<FindEmployeesResult>;
   countCommercialUsage(id: string, companyId: string): Promise<CommercialUsage>;
-  update(employee: Employee): Promise<Employee>;
+  update(employee: Employee, access?: MemberAccess | null): Promise<Employee>;
   delete(employee: Employee): Promise<void>;
 }

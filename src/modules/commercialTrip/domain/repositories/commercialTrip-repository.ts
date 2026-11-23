@@ -23,6 +23,12 @@ export interface CommercialTripRelation {
   name: string;
 }
 
+// Produto da view do ERP: o código é numérico (cd_prod).
+export interface CommercialTripProduct {
+  id: number;
+  name: string;
+}
+
 export interface CommercialTripFile {
   id: string;
   originalName: string | null;
@@ -36,7 +42,7 @@ export interface CommercialTripDetails {
   responsible: CommercialTripRelation;
   participants: CommercialTripRelation[];
   harvests: CommercialTripRelation[];
-  recommendedProducts: CommercialTripRelation[];
+  recommendedProducts: CommercialTripProduct[];
   files: CommercialTripFile[];
 }
 

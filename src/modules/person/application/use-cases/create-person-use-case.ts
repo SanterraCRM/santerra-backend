@@ -7,8 +7,10 @@ import {
   ForbiddenError,
   ResourceNotFoundError,
 } from "../../../../shared/errors/app-error";
+import { EmployeeAccessPreparer } from "../../../employee/application/services/employee-access-preparer";
 import { EmployeeMemberValidator } from "../../../employee/application/services/employee-member-validator";
 import { Employee } from "../../../employee/domain/entities/employee";
+import type { MemberAccess } from "../../../member";
 import { POTENTIAL_REPOSITORY, PotentialRepository } from "../../../potential";
 import { Producer } from "../../../producer/domain/entities/producer";
 import { Person } from "../../domain/entities/person";
@@ -27,6 +29,7 @@ export class CreatePersonUseCase {
     @inject(POTENTIAL_REPOSITORY)
     private readonly potentialRepository: PotentialRepository,
     private readonly employeeMemberValidator: EmployeeMemberValidator,
+    private readonly employeeAccessPreparer: EmployeeAccessPreparer,
   ) {}
 
   async execute(
@@ -63,12 +66,11 @@ export class CreatePersonUseCase {
       companyId: context.companyId,
       createdById: context.userId,
     };
-    const employee = employeeInput && Employee.create({ ...employeeInput, ...link });
     const producer = producerInput && Producer.create({ ...producerInput, ...link });
 
-    if (employee?.userCompanyId) {
+    if (employeeInput?.userCompanyId) {
       await this.employeeMemberValidator.ensureAvailable(
-        employee.userCompanyId,
+        employeeInput.userCompanyId,
         context.companyId,
       );
     }
@@ -80,8 +82,28 @@ export class CreatePersonUseCase {
       throw new ResourceNotFoundError("Potencial não encontrado.");
     }
 
-    const createdPerson = await this.personRepository.create(person, { employee, producer });
+    const memberAccess = employeeInput
+      ? await this.employeeAccessPreparer.prepare(person.toObject(), employeeInput, context)
+      : null;
+    const employee = employeeInput && this.createEmployee(employeeInput, memberAccess, link);
+    const createdPerson = await this.personRepository.create(person, {
+      employee,
+      producer,
+      memberAccess,
+    });
 
     return toPersonDetailsDto(createdPerson, context.permissions);
+  }
+
+  private createEmployee(
+    { access: _access, ...employeeInput }: NonNullable<CreatePersonDto["employee"]>,
+    memberAccess: MemberAccess | null,
+    link: { personId: string; companyId: string; createdById: string },
+  ): Employee {
+    return Employee.create({
+      ...employeeInput,
+      ...link,
+      userCompanyId: memberAccess?.member.id ?? employeeInput.userCompanyId,
+    });
   }
 }
