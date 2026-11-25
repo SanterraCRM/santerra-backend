@@ -102,6 +102,8 @@ enum GoalMetric {
   VISITED_PRODUCERS  @map("produtores_visitados")
   COMMERCIAL_ACTIONS @map("acoes_comerciais")
   SALES              @map("vendas")
+
+  @@schema("public")
 }
 
 model Company {
@@ -895,6 +897,7 @@ model Goal {
   @@unique([id, companyId])
   @@index([companyId, deletedAt])
   @@index([employeeId])
+  @@schema("public")
 }
 
 model ProductGroup {
